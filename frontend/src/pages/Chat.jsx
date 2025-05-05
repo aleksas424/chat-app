@@ -806,6 +806,24 @@ const Chat = () => {
     }
   };
 
+  const handleLeaveChat = async () => {
+    if (!selectedChat) return;
+    if (!window.confirm('Ar tikrai norite palikti šį pokalbį?')) return;
+    
+    try {
+      await axios.delete(`${API_URL}/api/group/${selectedChat.id}/leave`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      // Remove chat from list
+      setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
+      setSelectedChat(null);
+      toast.success('Sėkmingai palikote pokalbį');
+    } catch (error) {
+      toast.error('Nepavyko palikti pokalbio');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -1273,6 +1291,16 @@ const Chat = () => {
             {/* Delete buttons below members list */}
             {selectedChat && (
               <div className="mt-6 flex flex-col gap-2">
+                {/* Leave chat button for members */}
+                {selectedChat.type !== 'private' && myRole !== 'owner' && (
+                  <button
+                    className="w-full py-2 rounded bg-yellow-600 text-white font-medium hover:bg-yellow-700"
+                    onClick={handleLeaveChat}
+                  >
+                    Palikti pokalbį
+                  </button>
+                )}
+                
                 {/* Group/Channel delete (only for owner) */}
                 {selectedChat.type !== 'private' && myRole === 'owner' && (
                   <button
@@ -1296,6 +1324,7 @@ const Chat = () => {
                     Ištrinti {selectedChat.type === 'group' ? 'grupę' : 'kanalą'}
                   </button>
                 )}
+                
                 {/* Private chat delete (all users) */}
                 {selectedChat.type === 'private' && (
                   <button
