@@ -683,14 +683,16 @@ const Chat = () => {
       const userId = user.id;
       const userReaction = reactions.find(r => r.user_id === userId);
       if (userReaction && userReaction.emoji === emoji) {
-        // Jei jau uždėta ta pati, nuimti
         await axios.post(
           `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
           { emoji },
           { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
+        setMessageReactions(prev => ({
+          ...prev,
+          [messageId]: reactions.filter(r => !(r.user_id === userId && r.emoji === emoji))
+        }));
       } else {
-        // Jei buvo kita, nuimti seną ir uždėti naują
         if (userReaction) {
           await axios.post(
             `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
@@ -703,6 +705,13 @@ const Chat = () => {
           { emoji },
           { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
+        setMessageReactions(prev => ({
+          ...prev,
+          [messageId]: [
+            ...reactions.filter(r => r.user_id !== userId),
+            { user_id: userId, emoji }
+          ]
+        }));
       }
       setShowEmojiPickerFor(null);
     } catch (error) {
@@ -1113,7 +1122,7 @@ const Chat = () => {
         )}
         {/* Message Input */}
         {canSend && (
-          <form onSubmit={sendMessage} className="p-2 md:p-4 border-t border-slate-700 bg-white/20 dark:bg-slate-800/60 flex items-center gap-2 sticky bottom-0 rounded-b-3xl shadow-xl backdrop-blur-md">
+          <form onSubmit={sendMessage} className="fixed bottom-0 left-0 right-0 z-40 p-2 md:p-4 border-t border-slate-700 bg-white/20 dark:bg-slate-800/60 flex items-center gap-2 rounded-b-3xl shadow-xl backdrop-blur-md">
             <input
               type="text"
               value={newMessage}
