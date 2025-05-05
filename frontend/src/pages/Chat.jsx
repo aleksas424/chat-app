@@ -51,7 +51,7 @@ const Chat = () => {
   const [unreadCounts, setUnreadCounts] = useState({});
   const [notificationSettings, setNotificationSettings] = useState({});
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const notificationSound = new Audio('/notification.mp3');
+  const notificationSound = new Audio('/sounds/notification.mp3');
   const [pinnedMessage, setPinnedMessage] = useState(null);
 
   useEffect(() => {
@@ -213,21 +213,15 @@ const Chat = () => {
         const response = await axios.get(`${API_URL}/api/users`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        // Filter out current user and users we already have chats with
-        const filteredUsers = response.data.filter(u => 
-          u.id !== user.id && 
-          !chats.some(chat => 
-            chat.type === 'private' && 
-            chat.members.some(member => member.id === u.id)
-          )
-        );
+        // Filter out only current user
+        const filteredUsers = response.data.filter(u => u.id !== user.id);
         setUsers(filteredUsers);
       } catch (error) {
         setUsers([]);
       }
     };
     fetchUsers();
-  }, [user, chats]);
+  }, [user]);
 
   useEffect(() => {
     if (!socket) return;
@@ -351,19 +345,38 @@ const Chat = () => {
     setSidebarOpen(false);
   };
 
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessageEdited = ({ messageId, content, edited }) => {
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId ? { ...msg, content, edited } : msg
+      ));
+      setEditingMessage(null);
+      setEditContent('');
+    };
+
+    const handleMessageDeleted = ({ messageId }) => {
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    };
+
+    socket.on('message-edited', handleMessageEdited);
+    socket.on('message-deleted', handleMessageDeleted);
+
+    return () => {
+      socket.off('message-edited', handleMessageEdited);
+      socket.off('message-deleted', handleMessageDeleted);
+    };
+  }, [socket]);
+
   const handleEditMessage = async (messageId, newContent) => {
+    if (!newContent.trim()) return;
     try {
-      const response = await axios.patch(
+      await axios.patch(
         `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}`,
         { content: newContent },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      const updated = response.data;
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId ? { ...msg, ...updated } : msg
-      ));
-      setEditingMessage(null);
-      setEditContent('');
     } catch (error) {
       if (error.response && error.response.data && error.response.data.message) {
         toast.error(error.response.data.message);
@@ -389,29 +402,6 @@ const Chat = () => {
       }
     }
   };
-
-  // Add socket event listeners for message editing and deletion
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId ? { ...msg, content, edited } : msg
-      ));
-    };
-
-    const handleMessageDeleted = ({ messageId }) => {
-      setMessages(prev => prev.filter(msg => msg.id !== messageId));
-    };
-
-    socket.on('message-edited', handleMessageEdited);
-    socket.on('message-deleted', handleMessageDeleted);
-
-    return () => {
-      socket.off('message-edited', handleMessageEdited);
-      socket.off('message-deleted', handleMessageDeleted);
-    };
-  }, [socket]);
 
   const handleSearch = async (query) => {
     if (!query.trim() || !selectedChat) return;
@@ -747,6 +737,19 @@ const Chat = () => {
     setSearchResults([]);
   }, [selectedChat]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showEmojiPickerFor && !event.target.closest('.emoji-picker')) {
+        setShowEmojiPickerFor(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPickerFor]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -761,11 +764,11 @@ const Chat = () => {
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       {/* Sidebar */}
       <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block`}>
-        <div className="p-6 flex flex-col h-full">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white drop-shadow">Chats</h2>
+        <div className="p-4 md:p-6 flex flex-col h-full">
+          <div className="flex justify-between items-center mb-4 md:mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Chats</h2>
             <button
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl shadow hover:from-blue-600 hover:to-indigo-700 transition font-semibold"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow hover:from-blue-600 hover:to-indigo-700 transition font-semibold text-sm md:text-base"
               onClick={() => setShowNewModal(true)}
             >
               + Naujas
@@ -774,20 +777,20 @@ const Chat = () => {
           <input
             type="text"
             placeholder="Search chats..."
-            className="w-full mb-6 px-4 py-3 rounded-xl border-none bg-white/40 dark:bg-slate-700/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
+            className="w-full mb-4 md:mb-6 px-3 py-2 md:px-4 md:py-3 rounded-xl border-none bg-white/40 dark:bg-slate-700/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow text-sm md:text-base"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <div className="space-y-3 flex-1 overflow-y-auto">
+          <div className="space-y-2 md:space-y-3 flex-1 overflow-y-auto">
             {filteredChats.length === 0 && (
-              <div className="text-slate-400 text-center py-8">No chats found</div>
+              <div className="text-slate-400 text-center py-4 md:py-8 text-sm md:text-base">No chats found</div>
             )}
             {filteredChats.map(chat => (
               <motion.div
                 key={chat.id}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
-                className={`flex items-center gap-3 p-4 rounded-2xl cursor-pointer transition-colors duration-100 shadow-md ${
+                className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-2xl cursor-pointer transition-colors duration-100 shadow-md ${
                   selectedChat?.id === chat.id
                     ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'
                     : 'bg-white/30 dark:bg-slate-700/60 hover:bg-blue-500/20 dark:hover:bg-blue-700/40 text-slate-900 dark:text-white'
@@ -795,17 +798,17 @@ const Chat = () => {
                 onClick={() => handleSelectChat(chat)}
               >
                 {/* Avatar */}
-                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-xl shadow-lg">
+                <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
                   {typeIcon[chat.type] || '💬'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold truncate">
+                  <div className="flex items-center gap-1 md:gap-2">
+                    <span className="font-semibold truncate text-sm md:text-base">
                       {chat.display_name}
                     </span>
                     <span className="text-xs text-blue-200">{chat.type}</span>
                   </div>
-                  <div className="text-xs text-blue-100 truncate">
+                  <div className="text-xs md:text-sm text-blue-100 truncate">
                     {chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}
                   </div>
                 </div>
@@ -815,29 +818,29 @@ const Chat = () => {
         </div>
       </div>
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-y-auto px-2 py-4 md:px-8 md:py-8">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-y-auto px-2 py-2 md:px-8 md:py-8">
           {selectedChat ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-slate-700/20 bg-white/30 dark:bg-slate-800/60 backdrop-blur-md flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="p-3 md:p-4 border-b border-slate-700/20 bg-white/30 dark:bg-slate-800/60 backdrop-blur-md flex items-center justify-between">
+                <div className="flex items-center gap-2 md:gap-3">
                   <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="md:hidden p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
+                    className="md:hidden p-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                   </button>
-                  <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-xl shadow-lg">
+                  <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
                     {typeIcon[selectedChat.type] || '💬'}
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                    <h2 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white">
                       {selectedChat.display_name}
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
                       {selectedChat.type}
                     </p>
                   </div>
@@ -853,11 +856,11 @@ const Chat = () => {
                       handleSearch(e.target.value);
                     }}
                     placeholder="Search messages..."
-                    className="w-64 px-4 py-2 rounded-lg bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="w-48 md:w-64 px-3 py-1.5 md:px-4 md:py-2 rounded-lg bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm md:text-base"
                   />
                   {isSearching && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                    <div className="absolute right-2 md:right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-3 w-3 md:h-4 md:w-4 border-b-2 border-blue-500"></div>
                     </div>
                   )}
                 </div>
@@ -880,16 +883,16 @@ const Chat = () => {
                           }
                         }
                       }}
-                      className="p-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                      className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm md:text-base"
                     >
-                      🗑️ Ištrinti pokalbį
+                      🗑️ Ištrinti
                     </button>
                   ) : (
                     <button
                       onClick={() => setShowMembersModal(true)}
-                      className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
+                      className="p-1.5 md:p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
                     >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                       </svg>
                     </button>
@@ -897,36 +900,8 @@ const Chat = () => {
                 )}
               </div>
 
-              {/* Pinned Message */}
-              {pinnedMessage && (
-                <div className="p-4 border-b border-slate-700/20 bg-blue-50 dark:bg-blue-900/20">
-                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg>
-                    <span className="font-semibold">Pinned Message</span>
-                  </div>
-                  <div className="bg-white/60 dark:bg-slate-700/80 rounded-lg p-3">
-                    <div className="text-sm text-slate-600 dark:text-slate-400">
-                      {pinnedMessage.sender_name || pinnedMessage.senderName}
-                    </div>
-                    <div className="text-slate-900 dark:text-white">
-                      {pinnedMessage.content}
-                    </div>
-                    {selectedChat?.role === 'owner' || selectedChat?.role === 'admin' ? (
-                      <button
-                        onClick={() => handleUnpinMessage(pinnedMessage.id)}
-                        className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        Unpin
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              )}
-
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md">
+              <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md">
                 <AnimatePresence>
                   {messages.map(message => (
                     <motion.div
@@ -941,17 +916,17 @@ const Chat = () => {
                       }`}
                     >
                       <div
-                        className={`max-w-xs rounded-2xl px-5 py-3 shadow-lg backdrop-blur-md ${
+                        className={`max-w-[80%] md:max-w-xs rounded-2xl px-3 py-2 md:px-5 md:py-3 shadow-lg backdrop-blur-md ${
                           (message.sender_id || message.senderId) === user.id
                             ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'
                             : 'bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white'
                         }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="text-xs font-semibold text-blue-700 dark:text-blue-200">
+                        <div className="flex items-center gap-1 md:gap-2">
+                          <div className="text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-200">
                             {message.sender_name || message.senderName || message.user}
                           </div>
-                          <div className={`w-2 h-2 rounded-full ${
+                          <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
                             userStatuses[message.sender_id || message.senderId]?.status === 'online' ? 'bg-green-500' :
                             userStatuses[message.sender_id || message.senderId]?.status === 'away' ? 'bg-yellow-500' :
                             'bg-gray-500'
@@ -963,13 +938,13 @@ const Chat = () => {
                               type="text"
                               value={editContent}
                               onChange={(e) => setEditContent(e.target.value)}
-                              className="bg-white/20 dark:bg-slate-800/60 rounded-lg px-3 py-2 text-white"
+                              className="bg-white/20 dark:bg-slate-800/60 rounded-lg px-2 py-1.5 md:px-3 md:py-2 text-white text-sm md:text-base"
                               autoFocus
                             />
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleEditMessage(message.id, editContent)}
-                                className="px-3 py-1 bg-green-500 rounded-lg text-sm"
+                                className="px-2 py-1 md:px-3 md:py-1.5 bg-green-500 rounded-lg text-xs md:text-sm"
                               >
                                 Save
                               </button>
@@ -978,7 +953,7 @@ const Chat = () => {
                                   setEditingMessage(null);
                                   setEditContent('');
                                 }}
-                                className="px-3 py-1 bg-red-500 rounded-lg text-sm"
+                                className="px-2 py-1 md:px-3 md:py-1.5 bg-red-500 rounded-lg text-xs md:text-sm"
                               >
                                 Cancel
                               </button>
@@ -997,11 +972,11 @@ const Chat = () => {
                                   />
                                 ) : (
                                   <div className="flex items-center gap-2 p-2 bg-white/20 dark:bg-slate-800/60 rounded-lg">
-                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                     </svg>
                                     <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-medium truncate">{message.file_name}</div>
+                                      <div className="text-xs md:text-sm font-medium truncate">{message.file_name}</div>
                                       <div className="text-xs text-slate-400">{message.file_type}</div>
                                     </div>
                                     <a
@@ -1009,18 +984,18 @@ const Chat = () => {
                                       download={message.file_name}
                                       className="p-1 rounded-full hover:bg-white/20"
                                     >
-                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                       </svg>
                                     </a>
                                   </div>
                                 )}
-                                <div className="text-sm">{message.content}</div>
+                                <div className="text-xs md:text-sm">{message.content}</div>
                               </div>
                             ) : (
-                              <div className="text-sm">{message.content}</div>
+                              <div className="text-xs md:text-sm">{message.content}</div>
                             )}
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-1 md:gap-2 mt-1 md:mt-2">
                               <div className={`text-xs ${((message.sender_id || message.senderId) === user.id) ? 'text-white/80 drop-shadow' : 'text-slate-500 dark:text-slate-400'}`}>
                                 {new Date(message.created_at || message.createdAt).toLocaleString()}
                               </div>
@@ -1056,18 +1031,18 @@ const Chat = () => {
                               )}
                               {/* Emoji reactions */}
                               <button
-                                className="ml-2 text-xl hover:scale-110 transition-transform"
+                                className="ml-1 md:ml-2 text-lg md:text-xl hover:scale-110 transition-transform"
                                 onClick={() => setShowEmojiPickerFor(message.id)}
                                 title="Add reaction"
                               >
                                 😊
                               </button>
                               {showEmojiPickerFor === message.id && (
-                                <div className="absolute z-50 mt-8 bg-white dark:bg-slate-800 rounded shadow p-2 flex gap-1">
+                                <div className="absolute z-50 mt-8 bg-white dark:bg-slate-800 rounded shadow p-2 flex gap-1 emoji-picker">
                                   {emojiList.map(emoji => (
                                     <button
                                       key={emoji}
-                                      className="text-xl hover:scale-125 transition-transform"
+                                      className="text-lg md:text-xl hover:scale-125 transition-transform"
                                       onClick={() => handleAddReaction(message.id, emoji)}
                                     >
                                       {emoji}
@@ -1075,13 +1050,13 @@ const Chat = () => {
                                   ))}
                                 </div>
                               )}
-                              {/* Atvaizduoju visas reakcijas su kiekiu */}
+                              {/* Display reactions */}
                               {Array.isArray(messageReactions[message.id]) && messageReactions[message.id].length > 0 && (
-                                <span className="ml-2 flex gap-1">
+                                <span className="ml-1 md:ml-2 flex gap-1">
                                   {emojiList.filter(e => messageReactions[message.id].some(r => r.emoji === e)).map(emoji => {
                                     const count = messageReactions[message.id].filter(r => r.emoji === emoji).length;
                                     return (
-                                      <span key={emoji} className="text-xl">
+                                      <span key={emoji} className="text-lg md:text-xl">
                                         {emoji}{count > 1 ? ` x${count}` : ''}
                                       </span>
                                     );
@@ -1106,7 +1081,7 @@ const Chat = () => {
                     onChange={(e) => setNewMessage(e.target.value)}
                     onFocus={handleTyping}
                     onBlur={handleStopTyping}
-                    className="flex-1 rounded-xl border-none px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white shadow"
+                    className="flex-1 rounded-xl border-none px-3 py-2 md:px-4 md:py-3 text-sm md:text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white shadow"
                     placeholder="Type a message..."
                   />
                   <input
@@ -1122,13 +1097,13 @@ const Chat = () => {
                   />
                   <label
                     htmlFor="file-upload"
-                    className="p-3 rounded-xl bg-white/60 dark:bg-slate-700/80 hover:bg-white/80 dark:hover:bg-slate-700 cursor-pointer"
+                    className="p-2 md:p-3 rounded-xl bg-white/60 dark:bg-slate-700/80 hover:bg-white/80 dark:hover:bg-slate-700 cursor-pointer"
                     title="Upload file"
                   >
                     {uploadingFile ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-blue-500"></div>
                     ) : (
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.414a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                       </svg>
                     )}
@@ -1136,7 +1111,7 @@ const Chat = () => {
                   <button
                     type="submit"
                     disabled={!newMessage.trim()}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-lg font-semibold shadow-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm md:text-lg font-semibold shadow-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Send
                   </button>
@@ -1160,6 +1135,17 @@ const Chat = () => {
             <h3 className="text-md font-semibold mb-2 text-gray-900 dark:text-white flex items-center gap-2">
               Members <span className="text-xs text-gray-400">({members.length})</span>
             </h3>
+            {(myRole === 'owner' || myRole === 'admin') && (
+              <button
+                onClick={() => {
+                  setShowAddMember(true);
+                  setShowMembersModal(false);
+                }}
+                className="w-full mb-4 py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700"
+              >
+                Add Member
+              </button>
+            )}
             <div>
               {ownerMembers.length > 0 && <div className="font-bold text-xs text-gray-500 dark:text-gray-300 mb-1 mt-2">Owner</div>}
               <ul className="space-y-2">
