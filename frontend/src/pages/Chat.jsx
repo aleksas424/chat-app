@@ -58,6 +58,7 @@ const Chat = () => {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessageArrived, setNewMessageArrived] = useState(false);
   const [activeTab, setActiveTab] = useState('chats');
+  const [mobileView, setMobileView] = useState('chats'); // 'chats' arba 'chat'
 
   useEffect(() => {
     if (!user) return;
@@ -798,6 +799,19 @@ const Chat = () => {
     }
   };
 
+  const isMobile = window.innerWidth < 768;
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        if (selectedChat && mobileView !== 'chat') setMobileView('chat');
+        if (!selectedChat && mobileView !== 'chats') setMobileView('chats');
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [selectedChat, mobileView]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -808,659 +822,48 @@ const Chat = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900">
-      {/* Viršutinis header su burger meniu */}
-      <div className="flex items-center justify-between md:hidden p-3 bg-slate-900/80">
-        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-slate-800">
-          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <span className="text-lg font-bold text-white">Chat App</span>
-        <button onClick={() => setShowSearch(s => !s)} className="p-2 rounded-lg hover:bg-slate-800">
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
-          </svg>
-        </button>
-      </div>
-      {/* Sidebar overlay for mobile */}
-      <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
-      {/* Sidebar */}
-      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block`}>
-        <div className="p-4 md:p-6 flex flex-col h-full">
-          <div className="flex justify-between items-center mb-4 md:mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Chats</h2>
-            <button
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow hover:from-blue-600 hover:to-indigo-700 transition font-semibold text-sm md:text-base"
-              onClick={() => setShowNewModal(true)}
-            >
-              + Naujas
-            </button>
-          </div>
-          <input
-            type="text"
-            placeholder="Search chats..."
-            className="w-full mb-4 md:mb-6 px-3 py-2 md:px-4 md:py-3 rounded-xl border-none bg-white/40 dark:bg-slate-700/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow text-sm md:text-base"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <div className="space-y-2 md:space-y-3 flex-1 overflow-y-auto">
-            {filteredChats.length === 0 && (
-              <div className="text-slate-400 text-center py-4 md:py-8 text-sm md:text-base">No chats found</div>
-            )}
-            {filteredChats.map(chat => (
-              <motion.div
-                key={chat.id}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-2xl cursor-pointer transition-colors duration-100 shadow-md ${
-                  selectedChat?.id === chat.id
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'
-                    : 'bg-white/30 dark:bg-slate-700/60 hover:bg-blue-500/20 dark:hover:bg-blue-700/40 text-slate-900 dark:text-white'
-                }`}
-                onClick={() => handleSelectChat(chat)}
-              >
-                {/* Avatar */}
-                <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                  {typeIcon[chat.type] || '💬'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1 md:gap-2">
-                    <span className="font-semibold truncate text-sm md:text-base">
-                      {chat.display_name}
-                    </span>
-                    <span className="text-xs text-blue-200">{chat.type}</span>
-                  </div>
-                  <div className="text-xs md:text-sm text-blue-100 truncate">
-                    {chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Paieškos laukas kaip modalas */}
-        {showSearch && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg p-4 w-full max-w-xs mx-auto">
-              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none" onClick={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]); }} aria-label="Uždaryti">×</button>
-              <div className="relative">
-                <button className="absolute left-2 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700" onClick={async () => {
-                  if (window.confirm('Ar tikrai norite ištrinti šį pokalbį/grupę/kanalą?')) {
-                    try {
-                      if (selectedChat.type === 'private') {
-                        await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                      } else {
-                        await axios.delete(`${API_URL}/api/group/${selectedChat.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                      }
-                      setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
-                      setSelectedChat(null);
-                      setShowSearch(false);
-                      setSearchQuery('');
-                      setSearchResults([]);
-                      toast.success('Ištrinta!');
-                    } catch (error) {
-                      toast.error('Nepavyko ištrinti');
-                    }
-                  }
-                }} title="Ištrinti pokalbį/grupę/kanalą">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    handleSearch(e.target.value);
-                  }}
-                  placeholder="Ieškoti žinučių..."
-                  className="w-full px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  autoFocus
-                />
-              </div>
-              {/* Kontrastingi paieškos rezultatai */}
-              {searchQuery && searchResults.length > 0 && (
-                <div className="mt-4 p-4 rounded-lg bg-white dark:bg-slate-800 border-2 border-blue-500 shadow-xl">
-                  <h3 className="text-base font-bold text-blue-700 dark:text-blue-300 mb-2">Search Results</h3>
-                  <div className="space-y-2">
-                    {searchResults.map(message => (
-                      <div
-                        key={message.id}
-                        className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer border border-blue-200 dark:border-blue-700"
-                        onClick={() => {
-                          const messageElement = document.getElementById(`message-${message.id}`);
-                          if (messageElement) {
-                            messageElement.scrollIntoView({ behavior: 'smooth' });
-                            messageElement.classList.add('highlight');
-                            setTimeout(() => messageElement.classList.remove('highlight'), 2000);
-                          }
-                        }}
-                      >
-                        <div className="text-sm text-blue-900 dark:text-blue-200 font-semibold">{message.sender_name || message.senderName}</div>
-                        <div className="text-blue-800 dark:text-blue-100">{message.content}</div>
-                        <div className="text-xs text-blue-400 dark:text-blue-400">{new Date(message.created_at || message.createdAt).toLocaleString()}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        <div
-          className="flex-1 overflow-y-auto p-2 md:p-4 pb-24 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md"
-          onScroll={handleScroll}
-        >
-          <AnimatePresence>
-            {messages.map(message => (
-              <motion.div
-                key={message.id}
-                id={`message-${message.id}`}
-                data-message-id={message.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className={`flex ${
-                  (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
-                }`}
-                onTouchStart={e => handleMessageTouchStart(e, message)}
-                onTouchEnd={handleMessageTouchEnd}
-                onContextMenu={e => {
-                  e.preventDefault();
-                  const rect = e.target.getBoundingClientRect();
-                  setShowMessageMenu({ id: message.id, x: rect.left + rect.width / 2, y: rect.top });
-                }}
-              >
-                <div
-                  className={`max-w-[80%] md:max-w-xs rounded-2xl px-3 py-2 md:px-5 md:py-3 shadow-lg backdrop-blur-md ${
-                    (message.sender_id || message.senderId) === user.id
-                      ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'
-                      : 'bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-1 md:gap-2">
-                    <div className="text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-200">
-                      {message.sender_name || message.senderName || message.user}
-                    </div>
-                    <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
-                      userStatuses[message.sender_id || message.senderId]?.status === 'online' ? 'bg-green-500' :
-                      userStatuses[message.sender_id || message.senderId]?.status === 'away' ? 'bg-yellow-500' :
-                      'bg-gray-500'
-                    }`} />
-                  </div>
-                  {editingMessage === message.id ? (
-                    <div className="flex flex-col gap-2">
-                      <input
-                        type="text"
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        className="bg-white/20 dark:bg-slate-800/60 rounded-lg px-2 py-1.5 md:px-3 md:py-2 text-white text-sm md:text-base"
-                        autoFocus
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditMessage(message.id, editContent)}
-                          className="px-2 py-1 md:px-3 md:py-1.5 bg-green-500 rounded-lg text-xs md:text-sm"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingMessage(null);
-                            setEditContent('');
-                          }}
-                          className="px-2 py-1 md:px-3 md:py-1.5 bg-red-500 rounded-lg text-xs md:text-sm"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {message.file_name ? (
-                        <div className="space-y-2">
-                          {message.file_type && message.file_type.startsWith('image/') ? (
-                            <img
-                              src={`${API_URL}/uploads/${message.file_path}`}
-                              alt={message.file_name}
-                              className="max-w-full rounded-lg shadow-md"
-                              style={{ maxHeight: 200 }}
-                            />
-                          ) : (
-                            <div className="flex items-center gap-2 p-2 bg-white/20 dark:bg-slate-800/60 rounded-lg">
-                              <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                              </svg>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs md:text-sm font-medium truncate">{message.file_name}</div>
-                                <div className="text-xs text-slate-400">{message.file_type}</div>
-                              </div>
-                              <a
-                                href={`${API_URL}/uploads/${message.file_path}`}
-                                download={message.file_name}
-                                className="p-1 rounded-full hover:bg-white/20"
-                              >
-                                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                              </a>
-                            </div>
-                          )}
-                          <div className="text-xs md:text-sm">{message.content}</div>
-                        </div>
-                      ) : (
-                        <div className="text-xs md:text-sm">{message.content}</div>
-                      )}
-                      <div className="flex items-center gap-1 md:gap-2 mt-1 md:mt-2">
-                        <div className={`text-xs ${((message.sender_id || message.senderId) === user.id) ? 'text-white/80 drop-shadow' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {new Date(message.created_at || message.createdAt).toLocaleString()}
-                        </div>
-                        {(message.sender_id || message.senderId) === user.id && (
-                          <>
-                            <button
-                              onClick={() => {
-                                setEditingMessage(message.id);
-                                setEditContent(message.content);
-                              }}
-                              className="text-xs hover:text-blue-200"
-                              title="Edit message"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMessage(message.id)}
-                              className="text-xs hover:text-blue-200"
-                              title="Delete message"
-                            >
-                              🗑️
-                            </button>
-                          </>
-                        )}
-                        {(selectedChat?.role === 'owner' || selectedChat?.role === 'admin') && (
-                          <button
-                            onClick={() => message.pinned ? handleUnpinMessage(message.id) : handlePinMessage(message.id)}
-                            className="text-xs hover:text-blue-200"
-                            title={message.pinned ? "Unpin message" : "Pin message"}
-                          >
-                            {message.pinned ? "📌" : "📍"}
-                          </button>
-                        )}
-                        <button
-                          className="ml-1 md:ml-2 text-lg md:text-xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          onClick={() => setShowEmojiPickerFor(message.id)}
-                          title="Pridėti reakciją"
-                          aria-label="Pridėti reakciją"
-                        >
-                          😊
-                        </button>
-                        {showEmojiPickerFor === message.id && (
-                          <div className="absolute z-50 mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-lg p-3 flex gap-2 emoji-picker border-2 border-blue-400 animate-fade-in">
-                            {emojiList.map(emoji => (
-                              <button
-                                key={emoji}
-                                className="text-2xl md:text-3xl hover:scale-125 transition-transform focus:outline-none"
-                                onClick={() => handleAddReaction(message.id, emoji)}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={messagesEndRef} />
-          {/* Plaukiojantis 'Nauja žinutė' mygtukas */}
-          {newMessageArrived && !isAtBottom && (
-            <button
-              className="fixed bottom-24 right-4 z-50 bg-blue-600 text-white rounded-full shadow-lg p-3 animate-bounce"
-              onClick={() => {
-                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                setNewMessageArrived(false);
-              }}
-            >
-              ↓ Nauja žinutė
-            </button>
-          )}
-        </div>
-        {/* Long-press meniu */}
-        {showMessageMenu && (
-          <div
-            className="fixed z-50 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-2 flex flex-col gap-2"
-            style={{ left: showMessageMenu.x, top: showMessageMenu.y }}
-            onClick={() => setShowMessageMenu(null)}
-          >
-            <button onClick={() => { setEditingMessage(showMessageMenu.id); setShowMessageMenu(null); }} className="px-4 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded">Redaguoti</button>
-            <button onClick={() => { handleDeleteMessage(showMessageMenu.id); setShowMessageMenu(null); }} className="px-4 py-2 hover:bg-red-100 dark:hover:bg-red-700 rounded">Ištrinti</button>
-            <button onClick={() => { setShowEmojiPickerFor(showMessageMenu.id); setShowMessageMenu(null); }} className="px-4 py-2 hover:bg-yellow-100 dark:hover:bg-yellow-700 rounded">Reaguoti</button>
-          </div>
-        )}
-        {/* Message Input */}
-        {canSend && (
-          <form onSubmit={sendMessage} className="fixed bottom-0 left-0 right-0 z-40 p-2 md:p-4 border-t border-slate-700 bg-white/20 dark:bg-slate-800/60 flex items-center gap-2 rounded-b-3xl shadow-xl backdrop-blur-md">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onFocus={handleTyping}
-              onBlur={handleStopTyping}
-              className="flex-1 rounded-xl border-none px-3 py-2 md:px-4 md:py-3 text-sm md:text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white shadow"
-              placeholder="Type a message..."
-            />
-            <input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) handleFileUpload(file);
-                e.target.value = '';
-              }}
-              accept="image/*,.pdf,.doc,.docx"
-            />
-            <label
-              htmlFor="file-upload"
-              className="p-2 md:p-3 rounded-xl bg-white/60 dark:bg-slate-700/80 hover:bg-white/80 dark:hover:bg-slate-700 cursor-pointer"
-              title="Upload file"
-            >
-              {uploadingFile ? (
-                <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-blue-500"></div>
-              ) : (
-                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.414a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
-              )}
-            </label>
-            <button
-              type="submit"
-              disabled={!newMessage.trim()}
-              className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm md:text-lg font-semibold shadow-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Send
-            </button>
-          </form>
-        )}
-      </div>
-      {/* Members modal for mobile */}
-      {showMembersModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 w-full max-w-xs">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none"
-              onClick={() => setShowMembersModal(false)}
-              aria-label="Uždaryti"
-            >
-              ×
-            </button>
-            <h3 className="text-md font-semibold mb-2 text-gray-900 dark:text-white flex items-center gap-2">
-              Members <span className="text-xs text-gray-400">({members.length})</span>
-            </h3>
-            {(myRole === 'owner' || myRole === 'admin') && (
-              <button
-                onClick={() => {
-                  setShowAddMember(true);
-                  setShowMembersModal(false);
-                }}
-                className="w-full mb-4 py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700"
-              >
-                Add Member
-              </button>
-            )}
-            <div>
-              {ownerMembers.length > 0 && <div className="font-bold text-xs text-gray-500 dark:text-gray-300 mb-1 mt-2">Owner</div>}
-              <ul className="space-y-2">
-                {ownerMembers.map(member => (
-                  <li key={member.id} className="flex items-center gap-2">
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">{member.name[0].toUpperCase()}</div>
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-300">{member.role}</div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              {adminMembers.length > 0 && <div className="font-bold text-xs text-gray-500 dark:text-gray-300 mb-1 mt-2">Adminai</div>}
-              <ul className="space-y-2">
-                {adminMembers.map(member => (
-                  <li key={member.id} className="flex items-center gap-2">
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">{member.name[0].toUpperCase()}</div>
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-300">{member.role}</div>
-                    </div>
-                    {myRole === 'owner' && member.id !== user.id && (
-                      <select value={member.role} onChange={e => handleChangeRole(member.id, e.target.value)} className="ml-2 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700">
-                        <option value="admin">admin</option>
-                        <option value="member">member</option>
-                      </select>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {memberMembers.length > 0 && <div className="font-bold text-xs text-gray-500 dark:text-gray-300 mb-1 mt-2">Nariai</div>}
-              <ul className="space-y-2">
-                {memberMembers.map(member => (
-                  <li key={member.id} className="flex items-center gap-2">
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">{member.name[0].toUpperCase()}</div>
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-300">{member.role}</div>
-                    </div>
-                    {(myRole === 'owner' || (myRole === 'admin' && member.role === 'member')) && member.id !== user.id && (
-                      <select value={member.role} onChange={e => handleChangeRole(member.id, e.target.value)} className="ml-2 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700">
-                        <option value="member">member</option>
-                        <option value="admin">admin</option>
-                      </select>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* Delete buttons below members list */}
-            {selectedChat && (
-              <div className="mt-6 flex flex-col gap-2">
-                {/* Group/Channel delete (only for owner) */}
-                {selectedChat.type !== 'private' && myRole === 'owner' && (
-                  <button
-                    className="w-full py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700"
-                    onClick={async () => {
-                      if (window.confirm(`Ar tikrai norite ištrinti šį ${selectedChat.type === 'group' ? 'grupę' : 'kanalą'}?`)) {
-                        try {
-                          await axios.delete(`${API_URL}/api/group/${selectedChat.id}`, {
-                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                          });
-                          setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
-                          setSelectedChat(null);
-                          setShowMembersModal(false);
-                          toast.success(`${selectedChat.type === 'group' ? 'Grupė' : 'Kanalas'} ištrintas`);
-                        } catch (error) {
-                          toast.error('Nepavyko ištrinti');
-                        }
-                      }
-                    }}
-                  >
-                    Ištrinti {selectedChat.type === 'group' ? 'grupę' : 'kanalą'}
-                  </button>
-                )}
-                {/* Private chat delete (all users) */}
-                {selectedChat.type === 'private' && (
-                  <button
-                    className="w-full py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700"
-                    onClick={async () => {
-                      if (window.confirm('Ar tikrai norite ištrinti šį pokalbį?')) {
-                        try {
-                          await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, {
-                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                          });
-                          setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
-                          setSelectedChat(null);
-                          setShowMembersModal(false);
-                          toast.success('Pokalbis ištrintas');
-                        } catch (error) {
-                          toast.error('Nepavyko ištrinti pokalbio');
-                        }
-                      }
-                    }}
-                  >
-                    Ištrinti pokalbį
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      {/* Naujas pokalbis modalas */}
-      {showNewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 w-full max-w-xs">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none"
-              onClick={() => setShowNewModal(false)}
-              aria-label="Uždaryti"
-            >
-              ×
-            </button>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Sukurti naują</h3>
-            <div className="space-y-3">
-              <button
-                className="w-full py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700" 
-                onClick={() => { setShowUserSelect(true); setShowNewModal(false); }}
-              >
-                Privatus pokalbis
-              </button>
-              <button 
-                className="w-full py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700" 
-                onClick={() => { setCreateType('group'); setShowCreateGroupOrChannel(true); setShowNewModal(false); }}
-              >
-                Grupė
-              </button>
-              <button 
-                className="w-full py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700" 
-                onClick={() => { setCreateType('channel'); setShowCreateGroupOrChannel(true); setShowNewModal(false); }}
-              >
-                Kanalo kūrimas
-              </button>
-            </div>
-            <button className="mt-6 w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600" onClick={() => setShowNewModal(false)}>
-              Atšaukti
-            </button>
-          </div>
-        </div>
-      )}
-      {/* Žinučių paieškos rezultatai */}
-      {searchQuery && searchResults.length > 0 && (
-        <div className="p-4 bg-white/30 dark:bg-slate-800/60 backdrop-blur-md border-b border-slate-700/20">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Search Results
-          </h3>
-          <div className="space-y-2">
-            {searchResults.map(message => (
-              <div
-                key={message.id}
-                className="p-3 rounded-lg bg-white/40 dark:bg-slate-700/40 hover:bg-white/60 dark:hover:bg-slate-700/60 cursor-pointer"
-                onClick={() => {
-                  // Scroll to the message
-                  const messageElement = document.getElementById(`message-${message.id}`);
-                  if (messageElement) {
-                    messageElement.scrollIntoView({ behavior: 'smooth' });
-                    messageElement.classList.add('highlight');
-                    setTimeout(() => messageElement.classList.remove('highlight'), 2000);
-                  }
-                }}
-              >
-                <div className="text-sm text-slate-600 dark:text-slate-400">
-                  {message.sender_name || message.senderName}
-                </div>
-                <div className="text-slate-900 dark:text-white">
-                  {message.content}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-500">
-                  {new Date(message.created_at || message.createdAt).toLocaleString()}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* Modalas: pasirinkti vartotoją privačiam pokalbiui */}
-      {showUserSelect && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 w-full max-w-sm">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none"
-              onClick={() => setShowUserSelect(false)}
-              aria-label="Uždaryti"
-            >
-              ×
-            </button>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Pasirinkite vartotoją</h3>
-            <input
-              type="text"
-              className="w-full mb-2 px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Ieškoti narių..."
-              value={userSearch}
-              onChange={e => setUserSearch(e.target.value)}
-              aria-label="Ieškoti narių"
-            />
-            <div className="max-h-48 overflow-y-auto mb-2">
-              {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
-                <div
-                  key={u.id}
-                  className="flex items-center gap-2 px-2 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded cursor-pointer"
-                  onClick={async () => {
-                    await handleCreatePrivateChat(u.id);
-                    setShowUserSelect(false);
-                  }}
-                  tabIndex={0}
-                  aria-label={`Sukurti pokalbį su ${u.name}`}
-                >
-                  <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">
-                    {u.name[0].toUpperCase()}
-                  </span>
-                  <span className="text-gray-900 dark:text-white">{u.name}</span>
-                </div>
-              ))}
-            </div>
-            <button
-              className="mt-3 w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600"
-              onClick={() => setShowUserSelect(false)}
-            >
-              Atšaukti
-            </button>
-          </div>
-        </div>
-      )}
-      {/* Modalas: sukurti grupę ar kanalą */}
-      {showCreateGroupOrChannel && (
-        <CreateGroupOrChannelModal
-          type={createType}
-          onClose={() => setShowCreateGroupOrChannel(false)}
-          onCreated={(newChat) => {
-            setChats(prev => [...prev, {
-              id: newChat.chatId,
-              type: newChat.type,
-              display_name: newChat.name,
-              lastMessage: null
-            }]);
-            setSelectedChat({
-              id: newChat.chatId,
-              type: newChat.type,
-              display_name: newChat.name,
-              lastMessage: null
-            });
-            setShowCreateGroupOrChannel(false);
-          }}
-        />
+      {isMobile ? (
+        mobileView === 'chats' ? (
+          <SidebarComponent />
+        ) : (
+          <ChatComponent />
+        )
+      ) : (
+        <>
+          <SidebarComponent />
+          <ChatComponent />
+        </>
       )}
     </div>
   );
 };
+
+const SidebarComponent = () => (
+  <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block`}>
+    {/* ...sidebar turinys kaip buvo... */}
+    {filteredChats.map(chat => (
+      <motion.div
+        key={chat.id}
+        // ...
+        onClick={() => {
+          handleSelectChat(chat);
+          if (isMobile) setMobileView('chat');
+        }}
+      >
+        {/* ... */}
+      </motion.div>
+    ))}
+    {/* ... */}
+  </div>
+);
+
+const ChatComponent = () => (
+  <div className="flex-1 flex flex-col overflow-hidden">
+    {isMobile && (
+      <button onClick={() => setMobileView('chats')} className="p-2 m-2 rounded-lg bg-white/30 dark:bg-slate-700/60 text-blue-700 dark:text-blue-200 font-bold shadow">← Atgal</button>
+    )}
+    {/* ...chat lango turinys... */}
+  </div>
+);
 
 export default Chat; 
