@@ -292,6 +292,13 @@ const Chat = () => {
   };
 
   const handleCreatePrivateChat = async (userId) => {
+    const existing = chats.find(c => c.type === 'private' && c.members?.some(m => m.id === userId));
+    if (existing) {
+      setSelectedChat(existing);
+      setShowUserSelect(false);
+      setShowNewModal(false);
+      return;
+    }
     try {
       const response = await axios.post(`${API_URL}/api/chat/private`, 
         { userId },
@@ -672,16 +679,31 @@ const Chat = () => {
   // 1. Emoji reakcijų siuntimas į backend (toggle)
   const handleAddReaction = async (messageId, emoji) => {
     try {
-      // Surasti ar vartotojas jau turi šią reakciją
       const reactions = messageReactions[messageId] || [];
       const userId = user.id;
-      const alreadyReacted = reactions.some(r => r.user_id === userId && r.emoji === emoji);
-      // Siunčiam visada tą patį endpointą, backend pasirūpina toggle
-      await axios.post(
-        `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
-        { emoji },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      const userReaction = reactions.find(r => r.user_id === userId);
+      if (userReaction && userReaction.emoji === emoji) {
+        // Jei jau uždėta ta pati, nuimti
+        await axios.post(
+          `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
+          { emoji },
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        );
+      } else {
+        // Jei buvo kita, nuimti seną ir uždėti naują
+        if (userReaction) {
+          await axios.post(
+            `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
+            { emoji: userReaction.emoji },
+            { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+          );
+        }
+        await axios.post(
+          `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
+          { emoji },
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        );
+      }
       setShowEmojiPickerFor(null);
     } catch (error) {
       toast.error('Nepavyko pakeisti reakcijos');
@@ -747,9 +769,6 @@ const Chat = () => {
   const handleMessageTouchEnd = () => {
     clearTimeout(longPressTimer);
   };
-
-  // Apatinis tab bar (tik mobiliai ir planšetėms)
-  const isMobile = window.innerWidth < 1024;
 
   if (loading) {
     return (
@@ -838,7 +857,28 @@ const Chat = () => {
         {showSearch && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
             <div className="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg p-4 w-full max-w-xs mx-auto">
-              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none" onClick={() => setShowSearch(false)} aria-label="Uždaryti">×</button>
+              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none" onClick={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]); }} aria-label="Uždaryti">×</button>
+              <button className="absolute top-2 left-2 text-red-500 hover:text-red-700 text-xl focus:outline-none" onClick={async () => {
+                if (window.confirm('Ar tikrai norite ištrinti šį pokalbį/grupę/kanalą?')) {
+                  try {
+                    if (selectedChat.type === 'private') {
+                      await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                    } else {
+                      await axios.delete(`${API_URL}/api/group/${selectedChat.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                    }
+                    setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
+                    setSelectedChat(null);
+                    setShowSearch(false);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    toast.success('Ištrinta!');
+                  } catch (error) {
+                    toast.error('Nepavyko ištrinti');
+                  }
+                }
+              }} title="Ištrinti pokalbį/grupę/kanalą">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
               <input
                 type="text"
                 value={searchQuery}
@@ -850,6 +890,32 @@ const Chat = () => {
                 className="w-full px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 autoFocus
               />
+              {/* Kontrastingi paieškos rezultatai */}
+              {searchQuery && searchResults.length > 0 && (
+                <div className="mt-4 p-4 rounded-lg bg-white dark:bg-slate-800 border-2 border-blue-500 shadow-xl">
+                  <h3 className="text-base font-bold text-blue-700 dark:text-blue-300 mb-2">Search Results</h3>
+                  <div className="space-y-2">
+                    {searchResults.map(message => (
+                      <div
+                        key={message.id}
+                        className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800 cursor-pointer border border-blue-200 dark:border-blue-700"
+                        onClick={() => {
+                          const messageElement = document.getElementById(`message-${message.id}`);
+                          if (messageElement) {
+                            messageElement.scrollIntoView({ behavior: 'smooth' });
+                            messageElement.classList.add('highlight');
+                            setTimeout(() => messageElement.classList.remove('highlight'), 2000);
+                          }
+                        }}
+                      >
+                        <div className="text-sm text-blue-900 dark:text-blue-200 font-semibold">{message.sender_name || message.senderName}</div>
+                        <div className="text-blue-800 dark:text-blue-100">{message.content}</div>
+                        <div className="text-xs text-blue-400 dark:text-blue-400">{new Date(message.created_at || message.createdAt).toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -991,39 +1057,26 @@ const Chat = () => {
                             {message.pinned ? "📌" : "📍"}
                           </button>
                         )}
-                        {/* Emoji reactions */}
                         <button
-                          className="ml-1 md:ml-2 text-lg md:text-xl hover:scale-110 transition-transform"
+                          className="ml-1 md:ml-2 text-lg md:text-xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-400"
                           onClick={() => setShowEmojiPickerFor(message.id)}
-                          title="Add reaction"
+                          title="Pridėti reakciją"
+                          aria-label="Pridėti reakciją"
                         >
                           😊
                         </button>
                         {showEmojiPickerFor === message.id && (
-                          <div className="absolute z-50 mt-8 bg-white dark:bg-slate-800 rounded shadow p-2 flex gap-1 emoji-picker">
+                          <div className="absolute z-50 mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-lg p-3 flex gap-2 emoji-picker border-2 border-blue-400 animate-fade-in">
                             {emojiList.map(emoji => (
                               <button
                                 key={emoji}
-                                className="text-lg md:text-xl hover:scale-125 transition-transform"
+                                className="text-2xl md:text-3xl hover:scale-125 transition-transform focus:outline-none"
                                 onClick={() => handleAddReaction(message.id, emoji)}
                               >
                                 {emoji}
                               </button>
                             ))}
                           </div>
-                        )}
-                        {/* Display reactions */}
-                        {Array.isArray(messageReactions[message.id]) && messageReactions[message.id].length > 0 && (
-                          <span className="ml-1 md:ml-2 flex gap-1">
-                            {emojiList.filter(e => messageReactions[message.id].some(r => r.emoji === e)).map(emoji => {
-                              const count = messageReactions[message.id].filter(r => r.emoji === emoji).length;
-                              return (
-                                <span key={emoji} className="text-lg md:text-xl">
-                                  {emoji}{count > 1 ? ` x${count}` : ''}
-                                </span>
-                              );
-                            })}
-                          </span>
                         )}
                       </div>
                     </>
@@ -1058,8 +1111,6 @@ const Chat = () => {
             <button onClick={() => { setShowEmojiPickerFor(showMessageMenu.id); setShowMessageMenu(null); }} className="px-4 py-2 hover:bg-yellow-100 dark:hover:bg-yellow-700 rounded">Reaguoti</button>
           </div>
         )}
-        {/* Vietos paruošimas apatiniam tab bar ir emoji picker prie inputo */}
-        {/* TODO: Tab bar ir emoji picker bus įgyvendinti sekančiuose žingsniuose */}
         {/* Message Input */}
         {canSend && (
           <form onSubmit={sendMessage} className="p-2 md:p-4 border-t border-slate-700 bg-white/20 dark:bg-slate-800/60 flex items-center gap-2 sticky bottom-0 rounded-b-3xl shadow-xl backdrop-blur-md">
@@ -1377,32 +1428,6 @@ const Chat = () => {
             setShowCreateGroupOrChannel(false);
           }}
         />
-      )}
-      {/* Apatinis tab bar */}
-      {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-700 flex justify-around items-center h-16 shadow-2xl">
-          <button
-            className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'chats' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}
-            onClick={() => setActiveTab('chats')}
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2h2" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 3h-6a2 2 0 00-2 2v2a2 2 0 002 2h6a2 2 0 002-2V5a2 2 0 00-2-2z" /></svg>
-            Pokalbiai
-          </button>
-          <button
-            className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'search' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}
-            onClick={() => setActiveTab('search')}
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
-            Paieška
-          </button>
-          <button
-            className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'profile' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}
-            onClick={() => setActiveTab('profile')}
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            Profilis
-          </button>
-        </nav>
       )}
     </div>
   );
