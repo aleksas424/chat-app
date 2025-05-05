@@ -770,7 +770,7 @@ const Chat = () => {
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       {/* Sidebar */}
-      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block`}>
+      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block`}>
         <div className="p-4 md:p-6 flex flex-col h-full">
           <div className="flex justify-between items-center mb-4 md:mb-6">
             <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Chats</h2>
@@ -1298,7 +1298,17 @@ const Chat = () => {
       )}
       {/* Žinučių paieškos rezultatai */}
       {searchQuery && searchResults.length > 0 && (
-        <div className="p-4 bg-white/30 dark:bg-slate-800/60 backdrop-blur-md border-b border-slate-700/20">
+        <div className="p-4 bg-white/30 dark:bg-slate-800/60 backdrop-blur-md border-b border-slate-700/20 relative">
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setSearchResults([]);
+            }}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl font-bold focus:outline-none"
+            title="Uždaryti paieškos rezultatus"
+          >
+            ×
+          </button>
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
             Search Results
           </h3>
