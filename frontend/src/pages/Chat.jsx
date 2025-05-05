@@ -429,12 +429,10 @@ const Chat = () => {
 
   const handleFileUpload = async (file) => {
     if (!selectedChat) return;
-    
     setUploadingFile(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
-
       const response = await axios.post(
         `${API_URL}/api/chat/${selectedChat.id}/messages/file`,
         formData,
@@ -445,8 +443,9 @@ const Chat = () => {
           }
         }
       );
-
-      setMessages(prev => [...prev, response.data]);
+      if (response.data.chatId === selectedChat.id) {
+        setMessages(prev => [...prev, response.data]);
+      }
       setNewMessage('');
     } catch (error) {
       toast.error('Failed to upload file');
