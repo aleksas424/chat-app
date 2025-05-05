@@ -59,24 +59,35 @@ const Chat = () => {
   const [newMessageArrived, setNewMessageArrived] = useState(false);
   const [activeTab, setActiveTab] = useState('chats');
   const [mobileView, setMobileView] = useState('chats'); // 'chats' arba 'chat'
+  const [error, setError] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
 
   useEffect(() => {
     if (!user) return;
 
     const token = localStorage.getItem('token');
     const newSocket = io(SOCKET_URL, {
-      auth: {
-        token
-      }
+      auth: { token },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000
     });
 
     newSocket.on('connect', () => {
       console.log('Socket connected');
+      setIsConnecting(false);
+      setIsReconnecting(false);
+      setConnectionError(null);
     });
 
     newSocket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
-      toast.error('Failed to connect to chat server');
+      setConnectionError('Failed to connect to chat server. Retrying...');
+      setIsReconnecting(true);
     });
 
     newSocket.on('disconnect', (reason) => {
@@ -84,6 +95,23 @@ const Chat = () => {
       if (reason === 'io server disconnect') {
         newSocket.connect();
       }
+      setIsReconnecting(true);
+    });
+
+    newSocket.on('reconnect', (attemptNumber) => {
+      console.log('Socket reconnected after', attemptNumber, 'attempts');
+      setIsReconnecting(false);
+      setConnectionError(null);
+    });
+
+    newSocket.on('reconnect_error', (error) => {
+      console.error('Socket reconnection error:', error);
+      setConnectionError('Failed to reconnect to chat server');
+    });
+
+    newSocket.on('reconnect_failed', () => {
+      console.error('Socket reconnection failed');
+      setConnectionError('Failed to reconnect to chat server. Please refresh the page.');
     });
 
     newSocket.on('new-message', (message) => {
@@ -812,6 +840,49 @@ const Chat = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [selectedChat, mobileView]);
 
+  // Add error boundary
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
+          <button
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+            onClick={() => setError(null)}
+          >
+            <span className="sr-only">Dismiss</span>
+            <svg className="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <title>Close</title>
+              <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Add loading state
+  if (loading || isConnecting) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
+  // Add reconnecting state
+  if (isReconnecting) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Reconnecting: </strong>
+          <span className="block sm:inline">{connectionError || 'Attempting to reconnect...'}</span>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -839,30 +910,232 @@ const Chat = () => {
 };
 
 const SidebarComponent = () => (
-  <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block`}>
-    {/* ...sidebar turinys kaip buvo... */}
-    {filteredChats.map(chat => (
-      <motion.div
-        key={chat.id}
-        // ...
-        onClick={() => {
-          handleSelectChat(chat);
-          if (isMobile) setMobileView('chat');
-        }}
-      >
-        {/* ... */}
-      </motion.div>
-    ))}
-    {/* ... */}
+  <div className={`
+    fixed z-50 inset-y-0 left-0 w-full max-w-xs 
+    bg-white/20 dark:bg-slate-800/80 
+    border-r border-slate-700 
+    shadow-xl backdrop-blur-lg 
+    rounded-r-3xl 
+    transform transition-all duration-300 ease-in-out
+    md:static md:translate-x-0 
+    ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+    md:w-1/4 md:block
+  `}>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="p-4 border-b border-slate-700">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white">Chats</h2>
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="p-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+        <div className="mt-4">
+          <input
+            type="text"
+            placeholder="Search chats..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-4 py-2 rounded-lg bg-white/10 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
+          />
+        </div>
+      </div>
+
+      {/* Chat List */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        {filteredChats.map(chat => (
+          <motion.div
+            key={chat.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className={`
+              p-4 rounded-xl cursor-pointer
+              ${selectedChat?.id === chat.id 
+                ? 'bg-primary-500/20 border-primary-500' 
+                : 'bg-white/10 hover:bg-white/20 border-transparent'
+              }
+              border transition-all duration-200
+            `}
+            onClick={() => {
+              handleSelectChat(chat);
+              if (isMobile) setMobileView('chat');
+            }}
+          >
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-primary-500/20 flex items-center justify-center text-2xl">
+                  {typeIcon[chat.type]}
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium truncate">{chat.display_name}</p>
+                {chat.lastMessage && (
+                  <p className="text-sm text-slate-400 truncate">
+                    {chat.lastMessage.sender_name}: {chat.lastMessage.content}
+                  </p>
+                )}
+              </div>
+              {unreadCounts[chat.id] > 0 && (
+                <div className="flex-shrink-0">
+                  <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-primary-500 rounded-full">
+                    {unreadCounts[chat.id]}
+                  </span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
   </div>
 );
 
 const ChatComponent = () => (
   <div className="flex-1 flex flex-col overflow-hidden">
     {isMobile && (
-      <button onClick={() => setMobileView('chats')} className="p-2 m-2 rounded-lg bg-white/30 dark:bg-slate-700/60 text-blue-700 dark:text-blue-200 font-bold shadow">← Atgal</button>
+      <motion.button
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        onClick={() => setMobileView('chats')}
+        className="p-2 m-2 rounded-lg bg-white/30 dark:bg-slate-700/60 text-blue-700 dark:text-blue-200 font-bold shadow hover:bg-white/40 transition-colors duration-200"
+      >
+        ← Atgal
+      </motion.button>
     )}
-    {/* ...chat lango turinys... */}
+    
+    {selectedChat ? (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="flex-1 flex flex-col"
+      >
+        {/* Chat Header */}
+        <div className="p-4 border-b border-slate-700 bg-white/10 backdrop-blur-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-xl">
+                {typeIcon[selectedChat.type]}
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">{selectedChat.display_name}</h2>
+                {selectedChat.type === 'private' && (
+                  <p className="text-sm text-slate-400">
+                    {userStatuses[selectedChat.members?.[0]?.id]?.status || 'offline'}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowSearch(true)}
+                className="p-2 rounded-full hover:bg-white/10 text-white"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+              {selectedChat.type !== 'private' && (
+                <button
+                  onClick={() => setShowMembersModal(true)}
+                  className="p-2 rounded-full hover:bg-white/10 text-white"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div 
+          className="flex-1 overflow-y-auto p-4 space-y-4"
+          onScroll={handleScroll}
+        >
+          <AnimatePresence>
+            {messages.map(message => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className={`
+                  flex ${message.sender_id === user.id ? 'justify-end' : 'justify-start'}
+                `}
+              >
+                <div
+                  className={`
+                    max-w-[70%] rounded-lg p-3
+                    ${message.sender_id === user.id 
+                      ? 'bg-primary-500 text-white' 
+                      : 'bg-white/10 text-white'
+                    }
+                  `}
+                >
+                  {message.sender_id !== user.id && (
+                    <p className="text-sm font-medium mb-1">{message.sender_name}</p>
+                  )}
+                  <p className="break-words">{message.content}</p>
+                  {message.is_edited && (
+                    <p className="text-xs text-slate-400 mt-1">(edited)</p>
+                  )}
+                  <div className="flex items-center justify-end space-x-2 mt-1">
+                    <span className="text-xs text-slate-400">
+                      {new Date(message.created_at).toLocaleTimeString()}
+                    </span>
+                    {messageReads[message.id] && (
+                      <span className="text-xs text-slate-400">
+                        {Object.keys(messageReads[message.id]).length} read
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Message Input */}
+        <div className="p-4 border-t border-slate-700 bg-white/10 backdrop-blur-lg">
+          <form onSubmit={sendMessage} className="flex items-center space-x-2">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onFocus={handleTyping}
+              onBlur={handleStopTyping}
+              placeholder="Type a message..."
+              className="flex-1 px-4 py-2 rounded-lg bg-white/10 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-primary-500"
+            />
+            <button
+              type="submit"
+              disabled={!newMessage.trim()}
+              className="p-2 rounded-lg bg-primary-500 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-600 transition-colors duration-200"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
+          </form>
+        </div>
+      </motion.div>
+    ) : (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-slate-400">Select a chat to start messaging</p>
+      </div>
+    )}
   </div>
 );
 
