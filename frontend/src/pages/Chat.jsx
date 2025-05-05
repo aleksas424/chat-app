@@ -772,12 +772,12 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen min-h-screen overflow-hidden overflow-x-hidden bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900">
+    <div className="flex flex-col md:flex-row h-full min-h-0 overflow-hidden overflow-x-hidden bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900">
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen || chats.length === 0 ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       {/* Sidebar */}
-      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block h-full min-h-full overflow-x-hidden`}>
-        <div className="p-4 md:p-6 flex flex-col h-full min-h-full overflow-x-hidden">
+      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block h-full min-h-0 overflow-x-hidden`}>
+        <div className="p-4 md:p-6 flex flex-col h-full min-h-0 overflow-x-hidden">
           <div className="flex justify-between items-center mb-4 md:mb-6">
             <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Chats</h2>
             <button
@@ -794,7 +794,7 @@ const Chat = () => {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <div className="space-y-2 md:space-y-3 flex-1 overflow-y-auto">
+          <div className="space-y-2 md:space-y-3 flex-1 overflow-y-auto min-h-0">
             {filteredChats.length === 0 && (
               <div className="text-slate-400 text-center py-4 md:py-8 text-sm md:text-base">No chats found</div>
             )}
@@ -831,8 +831,8 @@ const Chat = () => {
         </div>
       </div>
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col overflow-hidden h-full min-h-full overflow-x-hidden">
-        <div className="flex-1 flex flex-col overflow-hidden px-2 py-2 md:px-8 md:py-8 h-full min-h-full overflow-x-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden h-full min-h-0 overflow-x-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden px-2 py-2 md:px-8 md:py-8 h-full min-h-0 overflow-x-hidden">
           {selectedChat ? (
             <>
               {/* Chat Header */}
@@ -915,7 +915,7 @@ const Chat = () => {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md max-h-full overflow-x-hidden">
+              <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md max-h-full min-h-0 overflow-x-hidden">
                 <AnimatePresence>
                   {messages.map(message => (
                     <motion.div
