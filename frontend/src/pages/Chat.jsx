@@ -895,13 +895,13 @@ const Chat = () => {
     <div className="flex flex-col md:flex-row h-screen bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900">
       {isMobile ? (
         mobileView === 'chats' ? (
-          <SidebarComponent />
+          <SidebarComponent sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         ) : (
           <ChatComponent />
         )
       ) : (
         <>
-          <SidebarComponent />
+          <SidebarComponent sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
           <ChatComponent />
         </>
       )}
@@ -909,7 +909,7 @@ const Chat = () => {
   );
 };
 
-const SidebarComponent = () => (
+const SidebarComponent = ({ sidebarOpen, setSidebarOpen }) => (
   <div className={`
     fixed z-50 inset-y-0 left-0 w-full max-w-xs 
     bg-white/20 dark:bg-slate-800/80 
