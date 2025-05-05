@@ -33,15 +33,44 @@ const AddMemberModal = ({ chatId, onClose, onAdded, existingMembers = [] }) => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      await axios.post(
-        `${API_URL}/api/group/${chatId}/members`,
-        { members: selectedUsers.map(u => u.id) },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      onAdded && onAdded();
-      onClose();
-    } catch (e) {
-      setError('Nepavyko pridėti narių.');
+      // Bandome pridėti visus iš karto
+      try {
+        await axios.post(
+          `${API_URL}/api/group/${chatId}/members`,
+          { members: selectedUsers.map(u => u.id) },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        onAdded && onAdded();
+        onClose();
+        return;
+      } catch (e) {
+        // Jei masyvas neveikia, bandome po vieną
+        let atLeastOne = false;
+        for (const u of selectedUsers) {
+          try {
+            await axios.post(
+              `${API_URL}/api/group/${chatId}/members`,
+              { members: [u.id] },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            atLeastOne = true;
+          } catch (err) {
+            // Jei yra error message iš backend, parodyk jį
+            if (err.response && err.response.data && err.response.data.message) {
+              setError(err.response.data.message);
+            } else {
+              setError('Nepavyko pridėti narių.');
+            }
+          }
+        }
+        if (atLeastOne) {
+          onAdded && onAdded();
+          onClose();
+          return;
+        }
+        // Jei visi errorai, parodyk klaidą
+        setError('Nepavyko pridėti narių.');
+      }
     } finally {
       setLoading(false);
     }
