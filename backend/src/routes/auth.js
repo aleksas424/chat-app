@@ -32,7 +32,7 @@ router.post('/register', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: result.insertId, email },
+      { id: result.insertId, name, email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -54,13 +54,21 @@ router.post('/register', async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
   try {
+    console.log('Login request received:', req.body);
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      console.log('Missing email or password');
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     // Check if user exists
     const [users] = await pool.query(
       'SELECT * FROM users WHERE email = ?',
       [email]
     );
+
+    console.log('User found:', users.length > 0);
 
     if (users.length === 0) {
       return res.status(400).json({ message: 'Invalid credentials' });
@@ -70,13 +78,20 @@ router.post('/login', async (req, res) => {
 
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match:', isMatch);
+
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not set');
+      return res.status(500).json({ message: 'Server configuration error' });
+    }
+
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, name: user.name, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -90,12 +105,12 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Get current user data
+// Get current user
 router.get('/me', auth, async (req, res) => {
   try {
     const [users] = await pool.query(
@@ -107,7 +122,7 @@ router.get('/me', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json(users[0]);
+    res.json({ user: users[0] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
