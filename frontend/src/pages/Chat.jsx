@@ -763,6 +763,21 @@ const Chat = () => {
     };
   }, [showEmojiPickerFor]);
 
+  // Pridėsiu handleRemoveMember funkciją
+  const handleRemoveMember = async (memberId) => {
+    if (!selectedChat) return;
+    if (!window.confirm('Ar tikrai norite pašalinti šį narį?')) return;
+    try {
+      await axios.delete(`${API_URL}/api/group/${selectedChat.id}/members/${memberId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setMembers(prev => prev.filter(m => m.id !== memberId));
+      toast.success('Narys pašalintas');
+    } catch (error) {
+      toast.error('Nepavyko pašalinti nario');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -1201,10 +1216,19 @@ const Chat = () => {
                       <div className="text-xs text-gray-500 dark:text-gray-300">{member.role}</div>
                     </div>
                     {(myRole === 'owner' || (myRole === 'admin' && member.role === 'member')) && member.id !== user.id && (
-                      <select value={member.role} onChange={e => handleChangeRole(member.id, e.target.value)} className="ml-2 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700">
-                        <option value="member">member</option>
-                        <option value="admin">admin</option>
-                      </select>
+                      <>
+                        <select value={member.role} onChange={e => handleChangeRole(member.id, e.target.value)} className="ml-2 rounded px-2 py-1 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-700">
+                          <option value="member">member</option>
+                          <option value="admin">admin</option>
+                        </select>
+                        <button
+                          className="ml-2 px-2 py-1 rounded bg-red-500 text-white text-xs hover:bg-red-700"
+                          onClick={() => handleRemoveMember(member.id)}
+                          title="Pašalinti narį"
+                        >
+                          Remove
+                        </button>
+                      </>
                     )}
                   </li>
                 ))}
@@ -1414,6 +1438,22 @@ const Chat = () => {
               lastMessage: null
             });
             setShowCreateGroupOrChannel(false);
+          }}
+        />
+      )}
+      {/* Modalas narių pridėjimui */}
+      {showAddMember && (
+        <AddMemberModal
+          chatId={selectedChat?.id}
+          onClose={() => setShowAddMember(false)}
+          onAdded={async () => {
+            // Po pridėjimo atnaujinti narių sąrašą
+            try {
+              const response = await axios.get(`${API_URL}/api/group/${selectedChat.id}/members`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+              });
+              setMembers(response.data);
+            } catch {}
           }}
         />
       )}
