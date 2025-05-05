@@ -703,12 +703,19 @@ const Chat = () => {
 
   // 1. Emoji reakcijų siuntimas į backend (toggle)
   const handleAddReaction = async (messageId, emoji) => {
-    try {
-      // Surasti ar vartotojas jau turi šią reakciją
+    // Tik mobilioje versijoje ribojam 1 emoji per user
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
       const reactions = messageReactions[messageId] || [];
       const userId = user.id;
-      const alreadyReacted = reactions.some(r => r.user_id === userId && r.emoji === emoji);
-      // Siunčiam visada tą patį endpointą, backend pasirūpina toggle
+      // Jei jau yra bent viena reakcija nuo šio userio, neleidžiam daugiau
+      if (reactions.some(r => r.user_id === userId)) {
+        toast.error('Mobilioje versijoje galima tik 1 reakcija!');
+        setShowEmojiPickerFor(null);
+        return;
+      }
+    }
+    try {
       await axios.post(
         `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
         { emoji },
@@ -848,21 +855,21 @@ const Chat = () => {
                 
                 {/* Search Bar */}
                 <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      handleSearch(e.target.value);
+                  <button
+                    onClick={() => {
+                      const query = prompt('Ieškoti žinutės:');
+                      if (query !== null) {
+                        setSearchQuery(query);
+                        handleSearch(query);
+                      }
                     }}
-                    placeholder="Search messages..."
-                    className="w-48 md:w-64 px-3 py-1.5 md:px-4 md:py-2 rounded-lg bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm md:text-base"
-                  />
-                  {isSearching && (
-                    <div className="absolute right-2 md:right-3 top-1/2 transform -translate-y-1/2">
-                      <div className="animate-spin rounded-full h-3 w-3 md:h-4 md:w-4 border-b-2 border-blue-500"></div>
-                    </div>
-                  )}
+                    className="p-2 rounded-lg bg-white/60 dark:bg-slate-700/80 hover:bg-blue-100 dark:hover:bg-blue-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    title="Ieškoti žinutės"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+                    </svg>
+                  </button>
                 </div>
 
                 {/* Members or Delete Chat Button */}
@@ -884,8 +891,9 @@ const Chat = () => {
                         }
                       }}
                       className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm md:text-base"
+                      title="Ištrinti pokalbį"
                     >
-                      🗑️ Ištrinti
+                      🗑️
                     </button>
                   ) : (
                     <button
