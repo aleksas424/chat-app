@@ -1,6 +1,5 @@
 -- Create database
-CREATE DATABASE IF NOT EXISTS chat_app;
-USE chat_app;
+
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
