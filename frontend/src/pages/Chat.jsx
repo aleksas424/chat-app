@@ -81,10 +81,15 @@ const Chat = () => {
     });
 
     newSocket.on('new-message', (message) => {
-      setMessages(prev => {
-        if (prev.some(m => m.id === message.id)) return prev;
-        return [...prev, message];
+      notificationSound.play().catch(error => {
+        console.error('Failed to play notification sound:', error);
       });
+      if (message.chatId === selectedChat?.id) {
+        setMessages(prev => {
+          if (prev.some(m => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+      }
       setChats(prev => prev.map(chat =>
         chat.id === message.chatId ? { ...chat, lastMessage: message } : chat
       ));
