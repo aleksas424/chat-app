@@ -3,7 +3,15 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const { initializeSocket } = require('./socket');
-require('dotenv').config();
+
+// Default environment variables if not set
+const PORT = process.env.PORT || 5000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/chat_app';
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+// Make JWT_SECRET available globally
+process.env.JWT_SECRET = JWT_SECRET;
 
 const app = express();
 const server = http.createServer(app);
@@ -13,13 +21,13 @@ const io = initializeSocket(server);
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: FRONTEND_URL,
   credentials: true
 }));
 app.use(express.json());
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -34,7 +42,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 

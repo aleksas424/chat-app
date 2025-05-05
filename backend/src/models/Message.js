@@ -23,8 +23,8 @@ const messageSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-messageSchema.index({ chatId: 1, createdAt: -1 });
+// Indexes for faster queries
+messageSchema.index({ chatId: 1 });
 messageSchema.index({ content: 'text' });
 
 const Message = mongoose.model('Message', messageSchema);

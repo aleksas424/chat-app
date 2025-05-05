@@ -1,195 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const Chat = require('../models/Chat');
-const Message = require('../models/Message');
-const User = require('../models/User');
 const auth = require('../middleware/auth');
 const pool = require('../config/database');
 const path = require('path');
-
-// Get all chats for the current user
-router.get('/', authenticateToken, async (req, res) => {
-  try {
-    const chats = await Chat.find({
-      members: req.user.id
-    }).populate('members', 'name email');
-    res.json(chats);
-  } catch (error) {
-    console.error('Error fetching chats:', error);
-    res.status(500).json({ message: 'Failed to fetch chats' });
-  }
-});
-
-// Create a private chat
-router.post('/private', authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.body;
-
-    // Check if a private chat already exists between these users
-    const existingChat = await Chat.findOne({
-      type: 'private',
-      members: { $all: [req.user.id, userId] }
-    });
-
-    if (existingChat) {
-      return res.json(existingChat);
-    }
-
-    // Create new private chat
-    const chat = new Chat({
-      type: 'private',
-      members: [req.user.id, userId]
-    });
-
-    await chat.save();
-    await chat.populate('members', 'name email');
-    res.status(201).json(chat);
-  } catch (error) {
-    console.error('Error creating private chat:', error);
-    res.status(500).json({ message: 'Failed to create private chat' });
-  }
-});
-
-// Create a group chat
-router.post('/group', authenticateToken, async (req, res) => {
-  try {
-    const { name, userIds } = req.body;
-
-    // Ensure the creator is included in the members
-    const members = [...new Set([req.user.id, ...userIds])];
-
-    const chat = new Chat({
-      type: 'group',
-      name,
-      members,
-      createdBy: req.user.id
-    });
-
-    await chat.save();
-    await chat.populate('members', 'name email');
-    res.status(201).json(chat);
-  } catch (error) {
-    console.error('Error creating group chat:', error);
-    res.status(500).json({ message: 'Failed to create group chat' });
-  }
-});
-
-// Get messages for a chat
-router.get('/:chatId/messages', authenticateToken, async (req, res) => {
-  try {
-    const chat = await Chat.findById(req.params.chatId);
-    if (!chat) {
-      return res.status(404).json({ message: 'Chat not found' });
-    }
-
-    if (!chat.members.includes(req.user.id)) {
-      return res.status(403).json({ message: 'Not authorized to access this chat' });
-    }
-
-    const messages = await Message.find({ chatId: req.params.chatId })
-      .sort({ createdAt: 1 })
-      .populate('senderId', 'name email');
-
-    res.json(messages);
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    res.status(500).json({ message: 'Failed to fetch messages' });
-  }
-});
-
-// Add a member to a group chat
-router.post('/:chatId/members', authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.body;
-    const chat = await Chat.findById(req.params.chatId);
-
-    if (!chat) {
-      return res.status(404).json({ message: 'Chat not found' });
-    }
-
-    if (chat.type !== 'group') {
-      return res.status(400).json({ message: 'Can only add members to group chats' });
-    }
-
-    if (!chat.members.includes(req.user.id)) {
-      return res.status(403).json({ message: 'Not authorized to modify this chat' });
-    }
-
-    if (chat.members.includes(userId)) {
-      return res.status(400).json({ message: 'User is already a member' });
-    }
-
-    chat.members.push(userId);
-    await chat.save();
-
-    const newMember = await User.findById(userId).select('name email');
-    res.json(newMember);
-  } catch (error) {
-    console.error('Error adding member:', error);
-    res.status(500).json({ message: 'Failed to add member' });
-  }
-});
-
-// Remove a member from a group chat
-router.delete('/:chatId/members/:userId', authenticateToken, async (req, res) => {
-  try {
-    const chat = await Chat.findById(req.params.chatId);
-
-    if (!chat) {
-      return res.status(404).json({ message: 'Chat not found' });
-    }
-
-    if (chat.type !== 'group') {
-      return res.status(400).json({ message: 'Can only remove members from group chats' });
-    }
-
-    if (!chat.members.includes(req.user.id)) {
-      return res.status(403).json({ message: 'Not authorized to modify this chat' });
-    }
-
-    // Only allow removing other members (not yourself)
-    if (req.params.userId === req.user.id) {
-      return res.status(400).json({ message: 'Cannot remove yourself from the chat' });
-    }
-
-    chat.members = chat.members.filter(id => id.toString() !== req.params.userId);
-    await chat.save();
-
-    res.json({ message: 'Member removed successfully' });
-  } catch (error) {
-    console.error('Error removing member:', error);
-    res.status(500).json({ message: 'Failed to remove member' });
-  }
-});
-
-// Search messages in a chat
-router.get('/search', authenticateToken, async (req, res) => {
-  try {
-    const { q } = req.query;
-    if (!q) {
-      return res.json([]);
-    }
-
-    // Get all chats the user is a member of
-    const userChats = await Chat.find({ members: req.user.id });
-    const chatIds = userChats.map(chat => chat._id);
-
-    // Search for messages in those chats
-    const messages = await Message.find({
-      chatId: { $in: chatIds },
-      content: { $regex: q, $options: 'i' }
-    })
-      .sort({ createdAt: -1 })
-      .populate('senderId', 'name email')
-      .populate('chatId', 'name type');
-
-    res.json(messages);
-  } catch (error) {
-    console.error('Error searching messages:', error);
-    res.status(500).json({ message: 'Failed to search messages' });
-  }
-});
 
 // Get all chats for a user
 router.get('/', auth, async (req, res) => {
@@ -246,6 +59,48 @@ router.get('/:chatId/messages', auth, async (req, res) => {
     `, [chatId]);
 
     res.json(messages);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create a new private chat
+router.post('/private', auth, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const currentUserId = req.user.id;
+
+    // Check if chat already exists
+    const [existingChats] = await pool.query(`
+      SELECT c.id
+      FROM chats c
+      JOIN chat_members cm1 ON c.id = cm1.chat_id
+      JOIN chat_members cm2 ON c.id = cm2.chat_id
+      WHERE c.type = 'private'
+      AND cm1.user_id = ?
+      AND cm2.user_id = ?
+    `, [currentUserId, userId]);
+
+    if (existingChats.length > 0) {
+      return res.json({ chatId: existingChats[0].id });
+    }
+
+    // Create new chat
+    const [chatResult] = await pool.query(
+      'INSERT INTO chats (type) VALUES (?)',
+      ['private']
+    );
+
+    const chatId = chatResult.insertId;
+
+    // Add members to chat
+    await pool.query(
+      'INSERT INTO chat_members (chat_id, user_id) VALUES (?, ?), (?, ?)',
+      [chatId, currentUserId, chatId, userId]
+    );
+
+    res.status(201).json({ chatId });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

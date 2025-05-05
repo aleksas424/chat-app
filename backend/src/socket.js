@@ -1,14 +1,13 @@
-const socketIO = require('socket.io');
+const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');
-
-let io;
+const Chat = require('./models/Chat');
+const Message = require('./models/Message');
 
 const initializeSocket = (server) => {
-  io = socketIO(server, {
+  const io = new Server(server, {
     cors: {
       origin: process.env.FRONTEND_URL,
-      methods: ['GET', 'POST'],
       credentials: true
     }
   });
@@ -22,7 +21,7 @@ const initializeSocket = (server) => {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select('name email');
+      const user = await User.findById(decoded.id).select('-password');
       
       if (!user) {
         return next(new Error('User not found'));
@@ -35,57 +34,97 @@ const initializeSocket = (server) => {
     }
   });
 
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     console.log(`User connected: ${socket.user.name}`);
 
-    // Join a chat room
-    socket.on('join_chat', (chatId) => {
-      socket.join(chatId);
-      console.log(`${socket.user.name} joined chat: ${chatId}`);
+    // Update user status to online
+    await User.findByIdAndUpdate(socket.user._id, {
+      status: 'online',
+      lastSeen: new Date()
     });
 
-    // Leave a chat room
-    socket.on('leave_chat', (chatId) => {
+    // Join user's chat rooms
+    const userChats = await Chat.find({ members: socket.user._id });
+    userChats.forEach(chat => {
+      socket.join(chat._id.toString());
+    });
+
+    // Broadcast user's online status to all their chats
+    userChats.forEach(chat => {
+      socket.to(chat._id.toString()).emit('user_status_change', {
+        userId: socket.user._id,
+        status: 'online'
+      });
+    });
+
+    // Handle joining a chat
+    socket.on('join_chat', async (chatId) => {
+      socket.join(chatId);
+    });
+
+    // Handle leaving a chat
+    socket.on('leave_chat', async (chatId) => {
       socket.leave(chatId);
-      console.log(`${socket.user.name} left chat: ${chatId}`);
     });
 
     // Handle new message
     socket.on('send_message', async (data) => {
-      const { chatId, content } = data;
-      
-      // Broadcast the message to all users in the chat
-      io.to(chatId).emit('new_message', {
-        chatId,
-        sender: {
-          id: socket.user._id,
-          name: socket.user.name,
-          email: socket.user.email
-        },
-        content,
-        createdAt: new Date()
-      });
+      try {
+        const { chatId, content } = data;
+
+        const chat = await Chat.findById(chatId);
+        if (!chat || !chat.members.includes(socket.user._id)) {
+          return;
+        }
+
+        const message = new Message({
+          chatId,
+          senderId: socket.user._id,
+          content,
+          readBy: [socket.user._id]
+        });
+
+        await message.save();
+        await message.populate('senderId', 'name');
+
+        // Update chat's last message
+        chat.lastMessage = message._id;
+        await chat.save();
+
+        io.to(chatId).emit('new_message', message);
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
     });
 
     // Handle typing status
     socket.on('typing', (data) => {
-      const { chatId, isTyping } = data;
-      socket.to(chatId).emit('user_typing', {
+      const { chatId } = data;
+      socket.to(chatId).emit('typing', {
         chatId,
         userId: socket.user._id,
-        name: socket.user.name,
-        isTyping
+        name: socket.user.name
       });
     });
 
     // Handle read receipts
-    socket.on('mark_read', (data) => {
-      const { chatId, messageId } = data;
-      socket.to(chatId).emit('message_read', {
-        chatId,
-        messageId,
-        userId: socket.user._id
-      });
+    socket.on('mark_read', async (data) => {
+      try {
+        const { messageId } = data;
+        const message = await Message.findById(messageId);
+        
+        if (message && !message.readBy.includes(socket.user._id)) {
+          message.readBy.push(socket.user._id);
+          await message.save();
+          
+          io.to(message.chatId.toString()).emit('message_read', {
+            messageId,
+            userId: socket.user._id
+          });
+        }
+      } catch (error) {
+        console.error('Error marking message as read:', error);
+      }
     });
 
     // Handle disconnection

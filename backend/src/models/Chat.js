@@ -32,7 +32,7 @@ const chatSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
+// Indexes for faster queries
 chatSchema.index({ members: 1 });
 chatSchema.index({ type: 1, members: 1 });
 
