@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL, SOCKET_URL } from '../config';
 import io from 'socket.io-client';
@@ -53,6 +53,11 @@ const Chat = () => {
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const notificationSound = new Audio('/sounds/notification.mp3');
   const [pinnedMessage, setPinnedMessage] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showMessageMenu, setShowMessageMenu] = useState(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [newMessageArrived, setNewMessageArrived] = useState(false);
+  const [activeTab, setActiveTab] = useState('chats');
 
   useEffect(() => {
     if (!user) return;
@@ -231,29 +236,33 @@ const Chat = () => {
           if (prev.some(m => m.id === message.id)) return prev;
           return [...prev, message];
         });
-      } else {
-        // Show notification for messages in other chats
-        const settings = notificationSettings[message.chatId] || { sound: true, desktop: true };
-        
-        if (settings.desktop && document.hidden) {
-          new Notification('New Message', {
-            body: `${message.senderName}: ${message.content}`,
-            icon: '/icon.png'
-          });
-        }
-
-        if (settings.sound) {
-          notificationSound.play().catch(error => {
-            console.error('Failed to play notification sound:', error);
-          });
-        }
       }
+      setChats(prev => prev.map(chat =>
+        chat.id === message.chatId ? { ...chat, lastMessage: message } : chat
+      ));
     };
     socket.on('new-message', handleNewMessage);
     return () => {
       socket.off('new-message', handleNewMessage);
     };
-  }, [socket, selectedChat, notificationSettings]);
+  }, [socket, selectedChat]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleMessageEdited = ({ messageId, chatId, content, edited }) => {
+      if (chatId === selectedChat?.id) {
+        setMessages(prev => prev.map(msg =>
+          msg.id === messageId ? { ...msg, content, edited } : msg
+        ));
+        setEditingMessage(null);
+        setEditContent('');
+      }
+    };
+    socket.on('message-edited', handleMessageEdited);
+    return () => {
+      socket.off('message-edited', handleMessageEdited);
+    };
+  }, [socket, selectedChat]);
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -343,47 +352,6 @@ const Chat = () => {
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
     setSidebarOpen(false);
-  };
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId ? { ...msg, content, edited } : msg
-      ));
-      setEditingMessage(null);
-      setEditContent('');
-    };
-
-    const handleMessageDeleted = ({ messageId }) => {
-      setMessages(prev => prev.filter(msg => msg.id !== messageId));
-    };
-
-    socket.on('message-edited', handleMessageEdited);
-    socket.on('message-deleted', handleMessageDeleted);
-
-    return () => {
-      socket.off('message-edited', handleMessageEdited);
-      socket.off('message-deleted', handleMessageDeleted);
-    };
-  }, [socket]);
-
-  const handleEditMessage = async (messageId, newContent) => {
-    if (!newContent.trim()) return;
-    try {
-      await axios.patch(
-        `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}`,
-        { content: newContent },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
-    } catch (error) {
-      if (error.response && error.response.data && error.response.data.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error('Failed to edit message');
-      }
-    }
   };
 
   const handleDeleteMessage = async (messageId) => {
@@ -750,6 +718,39 @@ const Chat = () => {
     };
   }, [showEmojiPickerFor]);
 
+  // Scroll į apačią kai ateina nauja žinutė
+  useEffect(() => {
+    if (isAtBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setNewMessageArrived(false);
+    } else {
+      setNewMessageArrived(true);
+    }
+  }, [messages]);
+
+  // Stebėti scroll poziciją
+  const handleScroll = useCallback((e) => {
+    const el = e.target;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+    setIsAtBottom(atBottom);
+    if (atBottom) setNewMessageArrived(false);
+  }, []);
+
+  // Long-press meniu logika
+  let longPressTimer = null;
+  const handleMessageTouchStart = (e, message) => {
+    longPressTimer = setTimeout(() => {
+      const rect = e.target.getBoundingClientRect();
+      setShowMessageMenu({ id: message.id, x: rect.left + rect.width / 2, y: rect.top });
+    }, 500);
+  };
+  const handleMessageTouchEnd = () => {
+    clearTimeout(longPressTimer);
+  };
+
+  // Apatinis tab bar (tik mobiliai ir planšetėms)
+  const isMobile = window.innerWidth < 1024;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -760,6 +761,20 @@ const Chat = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900">
+      {/* Viršutinis header su burger meniu */}
+      <div className="flex items-center justify-between md:hidden p-3 bg-slate-900/80">
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-slate-800">
+          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <span className="text-lg font-bold text-white">Chat App</span>
+        <button onClick={() => setShowSearch(s => !s)} className="p-2 rounded-lg hover:bg-slate-800">
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+          </svg>
+        </button>
+      </div>
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       {/* Sidebar */}
@@ -819,307 +834,277 @@ const Chat = () => {
       </div>
       {/* Main chat area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-y-auto px-2 py-2 md:px-8 md:py-8">
-          {selectedChat ? (
-            <>
-              {/* Chat Header */}
-              <div className="p-3 md:p-4 border-b border-slate-700/20 bg-white/30 dark:bg-slate-800/60 backdrop-blur-md flex items-center justify-between">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <button
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="md:hidden p-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  </button>
-                  <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                    {typeIcon[selectedChat.type] || '💬'}
-                  </div>
-                  <div>
-                    <h2 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white">
-                      {selectedChat.display_name}
-                    </h2>
-                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
-                      {selectedChat.type}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Search Bar */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      handleSearch(e.target.value);
-                    }}
-                    placeholder="Search messages..."
-                    className="w-48 md:w-64 px-3 py-1.5 md:px-4 md:py-2 rounded-lg bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm md:text-base"
-                  />
-                  {isSearching && (
-                    <div className="absolute right-2 md:right-3 top-1/2 transform -translate-y-1/2">
-                      <div className="animate-spin rounded-full h-3 w-3 md:h-4 md:w-4 border-b-2 border-blue-500"></div>
+        {/* Paieškos laukas kaip modalas */}
+        {showSearch && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg p-4 w-full max-w-xs mx-auto">
+              <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none" onClick={() => setShowSearch(false)} aria-label="Uždaryti">×</button>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                placeholder="Ieškoti žinučių..."
+                className="w-full px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                autoFocus
+              />
+            </div>
+          </div>
+        )}
+        <div
+          className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md"
+          onScroll={handleScroll}
+        >
+          <AnimatePresence>
+            {messages.map(message => (
+              <motion.div
+                key={message.id}
+                id={`message-${message.id}`}
+                data-message-id={message.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className={`flex ${
+                  (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
+                }`}
+                onTouchStart={e => handleMessageTouchStart(e, message)}
+                onTouchEnd={handleMessageTouchEnd}
+                onContextMenu={e => {
+                  e.preventDefault();
+                  const rect = e.target.getBoundingClientRect();
+                  setShowMessageMenu({ id: message.id, x: rect.left + rect.width / 2, y: rect.top });
+                }}
+              >
+                <div
+                  className={`max-w-[80%] md:max-w-xs rounded-2xl px-3 py-2 md:px-5 md:py-3 shadow-lg backdrop-blur-md ${
+                    (message.sender_id || message.senderId) === user.id
+                      ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'
+                      : 'bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-1 md:gap-2">
+                    <div className="text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-200">
+                      {message.sender_name || message.senderName || message.user}
                     </div>
-                  )}
-                </div>
-
-                {/* Members or Delete Chat Button */}
-                {selectedChat && (
-                  selectedChat.type === 'private' ? (
-                    <button
-                      onClick={async () => {
-                        if (window.confirm('Ar tikrai norite ištrinti šį pokalbį?')) {
-                          try {
-                            await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, {
-                              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                            });
-                            setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
-                            setSelectedChat(null);
-                            toast.success('Pokalbis ištrintas');
-                          } catch (error) {
-                            toast.error('Nepavyko ištrinti pokalbio');
-                          }
-                        }
-                      }}
-                      className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm md:text-base"
-                    >
-                      🗑️ Ištrinti
-                    </button>
+                    <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
+                      userStatuses[message.sender_id || message.senderId]?.status === 'online' ? 'bg-green-500' :
+                      userStatuses[message.sender_id || message.senderId]?.status === 'away' ? 'bg-yellow-500' :
+                      'bg-gray-500'
+                    }`} />
+                  </div>
+                  {editingMessage === message.id ? (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="text"
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="bg-white/20 dark:bg-slate-800/60 rounded-lg px-2 py-1.5 md:px-3 md:py-2 text-white text-sm md:text-base"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditMessage(message.id, editContent)}
+                          className="px-2 py-1 md:px-3 md:py-1.5 bg-green-500 rounded-lg text-xs md:text-sm"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingMessage(null);
+                            setEditContent('');
+                          }}
+                          className="px-2 py-1 md:px-3 md:py-1.5 bg-red-500 rounded-lg text-xs md:text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   ) : (
-                    <button
-                      onClick={() => setShowMembersModal(true)}
-                      className="p-1.5 md:p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
-                    >
-                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                    </button>
-                  )
-                )}
-              </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md">
-                <AnimatePresence>
-                  {messages.map(message => (
-                    <motion.div
-                      key={message.id}
-                      id={`message-${message.id}`}
-                      data-message-id={message.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className={`flex ${
-                        (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
-                      <div
-                        className={`max-w-[80%] md:max-w-xs rounded-2xl px-3 py-2 md:px-5 md:py-3 shadow-lg backdrop-blur-md ${
-                          (message.sender_id || message.senderId) === user.id
-                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'
-                            : 'bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1 md:gap-2">
-                          <div className="text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-200">
-                            {message.sender_name || message.senderName || message.user}
-                          </div>
-                          <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
-                            userStatuses[message.sender_id || message.senderId]?.status === 'online' ? 'bg-green-500' :
-                            userStatuses[message.sender_id || message.senderId]?.status === 'away' ? 'bg-yellow-500' :
-                            'bg-gray-500'
-                          }`} />
-                        </div>
-                        {editingMessage === message.id ? (
-                          <div className="flex flex-col gap-2">
-                            <input
-                              type="text"
-                              value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
-                              className="bg-white/20 dark:bg-slate-800/60 rounded-lg px-2 py-1.5 md:px-3 md:py-2 text-white text-sm md:text-base"
-                              autoFocus
+                    <>
+                      {message.file_name ? (
+                        <div className="space-y-2">
+                          {message.file_type && message.file_type.startsWith('image/') ? (
+                            <img
+                              src={`${API_URL}/uploads/${message.file_path}`}
+                              alt={message.file_name}
+                              className="max-w-full rounded-lg shadow-md"
+                              style={{ maxHeight: 200 }}
                             />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleEditMessage(message.id, editContent)}
-                                className="px-2 py-1 md:px-3 md:py-1.5 bg-green-500 rounded-lg text-xs md:text-sm"
+                          ) : (
+                            <div className="flex items-center gap-2 p-2 bg-white/20 dark:bg-slate-800/60 rounded-lg">
+                              <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                              </svg>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs md:text-sm font-medium truncate">{message.file_name}</div>
+                                <div className="text-xs text-slate-400">{message.file_type}</div>
+                              </div>
+                              <a
+                                href={`${API_URL}/uploads/${message.file_path}`}
+                                download={message.file_name}
+                                className="p-1 rounded-full hover:bg-white/20"
                               >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingMessage(null);
-                                  setEditContent('');
-                                }}
-                                className="px-2 py-1 md:px-3 md:py-1.5 bg-red-500 rounded-lg text-xs md:text-sm"
-                              >
-                                Cancel
-                              </button>
+                                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                              </a>
                             </div>
-                          </div>
-                        ) : (
+                          )}
+                          <div className="text-xs md:text-sm">{message.content}</div>
+                        </div>
+                      ) : (
+                        <div className="text-xs md:text-sm">{message.content}</div>
+                      )}
+                      <div className="flex items-center gap-1 md:gap-2 mt-1 md:mt-2">
+                        <div className={`text-xs ${((message.sender_id || message.senderId) === user.id) ? 'text-white/80 drop-shadow' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {new Date(message.created_at || message.createdAt).toLocaleString()}
+                        </div>
+                        {(message.sender_id || message.senderId) === user.id && (
                           <>
-                            {message.file_name ? (
-                              <div className="space-y-2">
-                                {message.file_type && message.file_type.startsWith('image/') ? (
-                                  <img
-                                    src={`${API_URL}/uploads/${message.file_path}`}
-                                    alt={message.file_name}
-                                    className="max-w-full rounded-lg shadow-md"
-                                    style={{ maxHeight: 200 }}
-                                  />
-                                ) : (
-                                  <div className="flex items-center gap-2 p-2 bg-white/20 dark:bg-slate-800/60 rounded-lg">
-                                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                    </svg>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-xs md:text-sm font-medium truncate">{message.file_name}</div>
-                                      <div className="text-xs text-slate-400">{message.file_type}</div>
-                                    </div>
-                                    <a
-                                      href={`${API_URL}/uploads/${message.file_path}`}
-                                      download={message.file_name}
-                                      className="p-1 rounded-full hover:bg-white/20"
-                                    >
-                                      <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                      </svg>
-                                    </a>
-                                  </div>
-                                )}
-                                <div className="text-xs md:text-sm">{message.content}</div>
-                              </div>
-                            ) : (
-                              <div className="text-xs md:text-sm">{message.content}</div>
-                            )}
-                            <div className="flex items-center gap-1 md:gap-2 mt-1 md:mt-2">
-                              <div className={`text-xs ${((message.sender_id || message.senderId) === user.id) ? 'text-white/80 drop-shadow' : 'text-slate-500 dark:text-slate-400'}`}>
-                                {new Date(message.created_at || message.createdAt).toLocaleString()}
-                              </div>
-                              {(message.sender_id || message.senderId) === user.id && (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      setEditingMessage(message.id);
-                                      setEditContent(message.content);
-                                    }}
-                                    className="text-xs hover:text-blue-200"
-                                    title="Edit message"
-                                  >
-                                    ✏️
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteMessage(message.id)}
-                                    className="text-xs hover:text-blue-200"
-                                    title="Delete message"
-                                  >
-                                    🗑️
-                                  </button>
-                                </>
-                              )}
-                              {(selectedChat?.role === 'owner' || selectedChat?.role === 'admin') && (
-                                <button
-                                  onClick={() => message.pinned ? handleUnpinMessage(message.id) : handlePinMessage(message.id)}
-                                  className="text-xs hover:text-blue-200"
-                                  title={message.pinned ? "Unpin message" : "Pin message"}
-                                >
-                                  {message.pinned ? "📌" : "📍"}
-                                </button>
-                              )}
-                              {/* Emoji reactions */}
-                              <button
-                                className="ml-1 md:ml-2 text-lg md:text-xl hover:scale-110 transition-transform"
-                                onClick={() => setShowEmojiPickerFor(message.id)}
-                                title="Add reaction"
-                              >
-                                😊
-                              </button>
-                              {showEmojiPickerFor === message.id && (
-                                <div className="absolute z-50 mt-8 bg-white dark:bg-slate-800 rounded shadow p-2 flex gap-1 emoji-picker">
-                                  {emojiList.map(emoji => (
-                                    <button
-                                      key={emoji}
-                                      className="text-lg md:text-xl hover:scale-125 transition-transform"
-                                      onClick={() => handleAddReaction(message.id, emoji)}
-                                    >
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Display reactions */}
-                              {Array.isArray(messageReactions[message.id]) && messageReactions[message.id].length > 0 && (
-                                <span className="ml-1 md:ml-2 flex gap-1">
-                                  {emojiList.filter(e => messageReactions[message.id].some(r => r.emoji === e)).map(emoji => {
-                                    const count = messageReactions[message.id].filter(r => r.emoji === emoji).length;
-                                    return (
-                                      <span key={emoji} className="text-lg md:text-xl">
-                                        {emoji}{count > 1 ? ` x${count}` : ''}
-                                      </span>
-                                    );
-                                  })}
-                                </span>
-                              )}
-                            </div>
+                            <button
+                              onClick={() => {
+                                setEditingMessage(message.id);
+                                setEditContent(message.content);
+                              }}
+                              className="text-xs hover:text-blue-200"
+                              title="Edit message"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMessage(message.id)}
+                              className="text-xs hover:text-blue-200"
+                              title="Delete message"
+                            >
+                              🗑️
+                            </button>
                           </>
                         )}
+                        {(selectedChat?.role === 'owner' || selectedChat?.role === 'admin') && (
+                          <button
+                            onClick={() => message.pinned ? handleUnpinMessage(message.id) : handlePinMessage(message.id)}
+                            className="text-xs hover:text-blue-200"
+                            title={message.pinned ? "Unpin message" : "Pin message"}
+                          >
+                            {message.pinned ? "📌" : "📍"}
+                          </button>
+                        )}
+                        {/* Emoji reactions */}
+                        <button
+                          className="ml-1 md:ml-2 text-lg md:text-xl hover:scale-110 transition-transform"
+                          onClick={() => setShowEmojiPickerFor(message.id)}
+                          title="Add reaction"
+                        >
+                          😊
+                        </button>
+                        {showEmojiPickerFor === message.id && (
+                          <div className="absolute z-50 mt-8 bg-white dark:bg-slate-800 rounded shadow p-2 flex gap-1 emoji-picker">
+                            {emojiList.map(emoji => (
+                              <button
+                                key={emoji}
+                                className="text-lg md:text-xl hover:scale-125 transition-transform"
+                                onClick={() => handleAddReaction(message.id, emoji)}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {/* Display reactions */}
+                        {Array.isArray(messageReactions[message.id]) && messageReactions[message.id].length > 0 && (
+                          <span className="ml-1 md:ml-2 flex gap-1">
+                            {emojiList.filter(e => messageReactions[message.id].some(r => r.emoji === e)).map(emoji => {
+                              const count = messageReactions[message.id].filter(r => r.emoji === emoji).length;
+                              return (
+                                <span key={emoji} className="text-lg md:text-xl">
+                                  {emoji}{count > 1 ? ` x${count}` : ''}
+                                </span>
+                              );
+                            })}
+                          </span>
+                        )}
                       </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-                <div ref={messagesEndRef} />
-              </div>
-              {/* Message Input */}
-              {canSend && (
-                <form onSubmit={sendMessage} className="p-2 md:p-4 border-t border-slate-700 bg-white/20 dark:bg-slate-800/60 flex items-center gap-2 sticky bottom-0 rounded-b-3xl shadow-xl backdrop-blur-md">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onFocus={handleTyping}
-                    onBlur={handleStopTyping}
-                    className="flex-1 rounded-xl border-none px-3 py-2 md:px-4 md:py-3 text-sm md:text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white shadow"
-                    placeholder="Type a message..."
-                  />
-                  <input
-                    type="file"
-                    id="file-upload"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) handleFileUpload(file);
-                      e.target.value = '';
-                    }}
-                    accept="image/*,.pdf,.doc,.docx"
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="p-2 md:p-3 rounded-xl bg-white/60 dark:bg-slate-700/80 hover:bg-white/80 dark:hover:bg-slate-700 cursor-pointer"
-                    title="Upload file"
-                  >
-                    {uploadingFile ? (
-                      <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-blue-500"></div>
-                    ) : (
-                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.414a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                      </svg>
-                    )}
-                  </label>
-                  <button
-                    type="submit"
-                    disabled={!newMessage.trim()}
-                    className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm md:text-lg font-semibold shadow-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Send
-                  </button>
-                </form>
-              )}
-            </>
-          ) : null}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
+          {/* Plaukiojantis 'Nauja žinutė' mygtukas */}
+          {newMessageArrived && !isAtBottom && (
+            <button
+              className="fixed bottom-24 right-4 z-50 bg-blue-600 text-white rounded-full shadow-lg p-3 animate-bounce"
+              onClick={() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                setNewMessageArrived(false);
+              }}
+            >
+              ↓ Nauja žinutė
+            </button>
+          )}
         </div>
+        {/* Long-press meniu */}
+        {showMessageMenu && (
+          <div
+            className="fixed z-50 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-2 flex flex-col gap-2"
+            style={{ left: showMessageMenu.x, top: showMessageMenu.y }}
+            onClick={() => setShowMessageMenu(null)}
+          >
+            <button onClick={() => { setEditingMessage(showMessageMenu.id); setShowMessageMenu(null); }} className="px-4 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded">Redaguoti</button>
+            <button onClick={() => { handleDeleteMessage(showMessageMenu.id); setShowMessageMenu(null); }} className="px-4 py-2 hover:bg-red-100 dark:hover:bg-red-700 rounded">Ištrinti</button>
+            <button onClick={() => { setShowEmojiPickerFor(showMessageMenu.id); setShowMessageMenu(null); }} className="px-4 py-2 hover:bg-yellow-100 dark:hover:bg-yellow-700 rounded">Reaguoti</button>
+          </div>
+        )}
+        {/* Vietos paruošimas apatiniam tab bar ir emoji picker prie inputo */}
+        {/* TODO: Tab bar ir emoji picker bus įgyvendinti sekančiuose žingsniuose */}
+        {/* Message Input */}
+        {canSend && (
+          <form onSubmit={sendMessage} className="p-2 md:p-4 border-t border-slate-700 bg-white/20 dark:bg-slate-800/60 flex items-center gap-2 sticky bottom-0 rounded-b-3xl shadow-xl backdrop-blur-md">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onFocus={handleTyping}
+              onBlur={handleStopTyping}
+              className="flex-1 rounded-xl border-none px-3 py-2 md:px-4 md:py-3 text-sm md:text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white shadow"
+              placeholder="Type a message..."
+            />
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) handleFileUpload(file);
+                e.target.value = '';
+              }}
+              accept="image/*,.pdf,.doc,.docx"
+            />
+            <label
+              htmlFor="file-upload"
+              className="p-2 md:p-3 rounded-xl bg-white/60 dark:bg-slate-700/80 hover:bg-white/80 dark:hover:bg-slate-700 cursor-pointer"
+              title="Upload file"
+            >
+              {uploadingFile ? (
+                <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-blue-500"></div>
+              ) : (
+                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.414a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              )}
+            </label>
+            <button
+              type="submit"
+              disabled={!newMessage.trim()}
+              className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm md:text-lg font-semibold shadow-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Send
+            </button>
+          </form>
+        )}
       </div>
       {/* Members modal for mobile */}
       {showMembersModal && (
@@ -1392,6 +1377,32 @@ const Chat = () => {
             setShowCreateGroupOrChannel(false);
           }}
         />
+      )}
+      {/* Apatinis tab bar */}
+      {isMobile && (
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-700 flex justify-around items-center h-16 shadow-2xl">
+          <button
+            className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'chats' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}
+            onClick={() => setActiveTab('chats')}
+          >
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2h2" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 3h-6a2 2 0 00-2 2v2a2 2 0 002 2h6a2 2 0 002-2V5a2 2 0 00-2-2z" /></svg>
+            Pokalbiai
+          </button>
+          <button
+            className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'search' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}
+            onClick={() => setActiveTab('search')}
+          >
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
+            Paieška
+          </button>
+          <button
+            className={`flex flex-col items-center justify-center flex-1 h-full ${activeTab === 'profile' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}
+            onClick={() => setActiveTab('profile')}
+          >
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            Profilis
+          </button>
+        </nav>
       )}
     </div>
   );
