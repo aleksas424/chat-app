@@ -779,6 +779,25 @@ const Chat = () => {
     clearTimeout(longPressTimer);
   };
 
+  const handleEditMessage = async (messageId, newContent) => {
+    if (!newContent.trim()) return;
+    try {
+      await axios.patch(
+        `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}`,
+        { content: newContent },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      setEditingMessage(null);
+      setEditContent('');
+    } catch (error) {
+      if (error.response && error.response.data && error.response.data.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('Failed to edit message');
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -867,38 +886,40 @@ const Chat = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
             <div className="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg p-4 w-full max-w-xs mx-auto">
               <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none" onClick={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]); }} aria-label="Uždaryti">×</button>
-              <button className="absolute top-2 left-2 text-red-500 hover:text-red-700 text-xl focus:outline-none" onClick={async () => {
-                if (window.confirm('Ar tikrai norite ištrinti šį pokalbį/grupę/kanalą?')) {
-                  try {
-                    if (selectedChat.type === 'private') {
-                      await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-                    } else {
-                      await axios.delete(`${API_URL}/api/group/${selectedChat.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+              <div className="relative">
+                <button className="absolute left-2 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700" onClick={async () => {
+                  if (window.confirm('Ar tikrai norite ištrinti šį pokalbį/grupę/kanalą?')) {
+                    try {
+                      if (selectedChat.type === 'private') {
+                        await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                      } else {
+                        await axios.delete(`${API_URL}/api/group/${selectedChat.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+                      }
+                      setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
+                      setSelectedChat(null);
+                      setShowSearch(false);
+                      setSearchQuery('');
+                      setSearchResults([]);
+                      toast.success('Ištrinta!');
+                    } catch (error) {
+                      toast.error('Nepavyko ištrinti');
                     }
-                    setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
-                    setSelectedChat(null);
-                    setShowSearch(false);
-                    setSearchQuery('');
-                    setSearchResults([]);
-                    toast.success('Ištrinta!');
-                  } catch (error) {
-                    toast.error('Nepavyko ištrinti');
                   }
-                }
-              }} title="Ištrinti pokalbį/grupę/kanalą">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  handleSearch(e.target.value);
-                }}
-                placeholder="Ieškoti žinučių..."
-                className="w-full px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                autoFocus
-              />
+                }} title="Ištrinti pokalbį/grupę/kanalą">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    handleSearch(e.target.value);
+                  }}
+                  placeholder="Ieškoti žinučių..."
+                  className="w-full px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  autoFocus
+                />
+              </div>
               {/* Kontrastingi paieškos rezultatai */}
               {searchQuery && searchResults.length > 0 && (
                 <div className="mt-4 p-4 rounded-lg bg-white dark:bg-slate-800 border-2 border-blue-500 shadow-xl">
@@ -929,7 +950,7 @@ const Chat = () => {
           </div>
         )}
         <div
-          className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md"
+          className="flex-1 overflow-y-auto p-2 md:p-4 pb-24 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md"
           onScroll={handleScroll}
         >
           <AnimatePresence>
