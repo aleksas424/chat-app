@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 
-const AddMemberModal = ({ chatId, onClose, onAdded }) => {
+const AddMemberModal = ({ chatId, onClose, onAdded, existingMembers = [] }) => {
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [search, setSearch] = useState('');
@@ -47,9 +47,11 @@ const AddMemberModal = ({ chatId, onClose, onAdded }) => {
     }
   };
 
+  const existingIds = existingMembers.map(m => m.id);
   const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) &&
-    !selectedUsers.some(su => su.id === u.id)
+    !selectedUsers.some(su => su.id === u.id) &&
+    !existingIds.includes(u.id)
   );
 
   return (

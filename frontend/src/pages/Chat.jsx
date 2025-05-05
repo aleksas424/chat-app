@@ -1455,6 +1455,7 @@ const Chat = () => {
               setMembers(response.data);
             } catch {}
           }}
+          existingMembers={members}
         />
       )}
     </div>
