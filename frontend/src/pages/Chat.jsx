@@ -63,6 +63,21 @@ const Chat = () => {
   const [isConnecting, setIsConnecting] = useState(true);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
+  const [notificationPermission, setNotificationPermission] = useState('default');
+
+  useEffect(() => {
+    // Check notification permission
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+      
+      // Request permission if not granted
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
+        });
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -122,6 +137,14 @@ const Chat = () => {
       setChats(prev => prev.map(chat =>
         chat.id === message.chatId ? { ...chat, lastMessage: message } : chat
       ));
+
+      // Show notification if permission granted and message is from another user
+      if (notificationPermission === 'granted' && message.senderId !== user.id) {
+        new Notification('New Message', {
+          body: `${message.senderName}: ${message.content}`,
+          icon: '/favicon.ico'
+        });
+      }
     });
 
     newSocket.on('user-typing', ({ userId, chatId }) => {
@@ -162,7 +185,7 @@ const Chat = () => {
     return () => {
       newSocket.disconnect();
     };
-  }, [user]);
+  }, [user, notificationPermission]);
 
   useEffect(() => {
     // Fetch chats and join rooms when chats change
@@ -890,6 +913,33 @@ const Chat = () => {
       </div>
     );
   }
+
+  // Add this effect to handle search
+  useEffect(() => {
+    if (!search) {
+      setSearchResults([]);
+      return;
+    }
+
+    const searchMessages = async () => {
+      setIsSearching(true);
+      try {
+        const response = await axios.get(`${API_URL}/api/chat/search`, {
+          params: { query: search },
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setSearchResults(response.data);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchMessages, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [search]);
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gradient-to-br from-blue-700 via-indigo-800 to-slate-900">
