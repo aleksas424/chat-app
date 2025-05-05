@@ -17,7 +17,8 @@ const server = http.createServer(app);
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://chat-app-jade-six.vercel.app' // <-- tavo Vercel adresas
+  'https://chat-app-jade-six.vercel.app',
+  'https://chat-app-eeo6.vercel.app' // <-- pridėk šį naują adresą!
 ];
 
 const io = socketIo(server, {
