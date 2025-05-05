@@ -378,17 +378,45 @@ const Chat = () => {
 
   const handleEditMessage = async (messageId, newContent) => {
     if (!newContent.trim()) return;
+    
+    // Optimistinis atnaujinimas - iškart atnaujinti UI
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
+    ));
+    
     try {
-      await axios.patch(
+      const response = await axios.patch(
         `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}`,
         { content: newContent },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
+      
+      // Jei sėkminga, atnaujinti su serverio duomenimis
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
+      ));
+      
+      // Uždaryti redagavimo režimą
+      setEditingMessage(null);
+      setEditContent('');
+      
+      toast.success('Žinutė atnaujinta');
     } catch (error) {
-      if (error.response && error.response.data && error.response.data.message) {
-        toast.error(error.response.data.message);
+      // Jei klaida, grąžinti seną žinutę
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId ? { ...msg, content: msg.content } : msg
+      ));
+      
+      if (error.response) {
+        if (error.response.status === 403) {
+          toast.error('Neturite teisės redaguoti šios žinutės');
+        } else if (error.response.status === 404) {
+          toast.error('Žinutė nerasta');
+        } else {
+          toast.error(error.response.data.message || 'Nepavyko redaguoti žinutės');
+        }
       } else {
-        toast.error('Failed to edit message');
+        toast.error('Nepavyko prisijungti prie serverio');
       }
     }
   };
@@ -967,24 +995,32 @@ const Chat = () => {
                               type="text"
                               value={editContent}
                               onChange={(e) => setEditContent(e.target.value)}
-                              className="bg-white/20 dark:bg-slate-800/60 rounded-lg px-2 py-1.5 md:px-3 md:py-2 text-white text-sm md:text-base"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleEditMessage(message.id, editContent);
+                                } else if (e.key === 'Escape') {
+                                  setEditingMessage(null);
+                                  setEditContent('');
+                                }
+                              }}
+                              className="bg-white/20 dark:bg-slate-800/60 rounded-lg px-3 py-2 text-white text-sm md:text-base w-full"
                               autoFocus
                             />
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 justify-end">
                               <button
                                 onClick={() => handleEditMessage(message.id, editContent)}
-                                className="px-2 py-1 md:px-3 md:py-1.5 bg-green-500 rounded-lg text-xs md:text-sm"
+                                className="px-3 py-1.5 bg-green-500 hover:bg-green-600 rounded-lg text-xs md:text-sm transition-colors"
                               >
-                                Save
+                                Išsaugoti
                               </button>
                               <button
                                 onClick={() => {
                                   setEditingMessage(null);
                                   setEditContent('');
                                 }}
-                                className="px-2 py-1 md:px-3 md:py-1.5 bg-red-500 rounded-lg text-xs md:text-sm"
+                                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs md:text-sm transition-colors"
                               >
-                                Cancel
+                                Atšaukti
                               </button>
                             </div>
                           </div>
@@ -1035,15 +1071,15 @@ const Chat = () => {
                                       setEditingMessage(message.id);
                                       setEditContent(message.content);
                                     }}
-                                    className="text-xs hover:text-blue-200"
-                                    title="Edit message"
+                                    className="text-xs hover:text-blue-200 transition-colors"
+                                    title="Redaguoti žinutę"
                                   >
                                     ✏️
                                   </button>
                                   <button
                                     onClick={() => handleDeleteMessage(message.id)}
-                                    className="text-xs hover:text-blue-200"
-                                    title="Delete message"
+                                    className="text-xs hover:text-blue-200 transition-colors"
+                                    title="Ištrinti žinutę"
                                   >
                                     🗑️
                                   </button>
