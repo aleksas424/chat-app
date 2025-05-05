@@ -1,120 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_URL } from '../config';
+import { getApiUrl } from '../config';
+import { useAuth } from '../contexts/AuthContext';
 
-const AddMemberModal = ({ chatId, onClose, onAdded }) => {
+export default function AddMemberModal({ isOpen, onClose, onAddMember, existingMembers }) {
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`${API_URL}/api/users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setUsers(res.data);
-      } catch {
-        setUsers([]);
+        const response = await axios.get(`${getApiUrl()}api/users`);
+        // Filter out current user and existing members
+        const filteredUsers = response.data.filter(u => 
+          u.id !== user.id && !existingMembers.some(m => m.id === u.id)
+        );
+        setUsers(filteredUsers);
+      } catch (error) {
+        console.error('Error fetching users:', error);
       }
     };
-    fetchUsers();
-  }, []);
 
-  const handleAdd = async () => {
-    if (selectedUsers.length === 0) {
-      setError('Pasirinkite bent vieną narį');
-      return;
+    if (isOpen) {
+      fetchUsers();
     }
-    setLoading(true);
-    setError('');
+  }, [isOpen, user.id, existingMembers]);
+
+  const handleAddMember = async (userId) => {
+    setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${API_URL}/api/group/${chatId}/members`,
-        { members: selectedUsers.map(u => u.id) },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      onAdded && onAdded();
+      await onAddMember(userId);
       onClose();
-    } catch (e) {
-      setError('Nepavyko pridėti narių.');
+    } catch (error) {
+      console.error('Error adding member:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) &&
-    !selectedUsers.some(su => su.id === u.id)
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 w-full max-w-sm">
-        <button
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none"
-          onClick={onClose}
-          aria-label="Uždaryti"
-        >
-          ×
-        </button>
-        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Pridėti narius</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-4">Add Member</h2>
+
+        {/* Search input */}
         <input
           type="text"
-          className="w-full mb-2 px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="Ieškoti narių..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          aria-label="Ieškoti narių"
+          placeholder="Search users..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full p-2 border rounded mb-4"
         />
-        {selectedUsers.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {selectedUsers.map(u => (
-              <span key={u.id} className="flex items-center gap-1 px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded-full text-xs">
-                {u.name}
-                <button onClick={() => setSelectedUsers(selectedUsers.filter(su => su.id !== u.id))} className="ml-1 text-xs" aria-label={`Pašalinti narį ${u.name}`}>×</button>
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="max-h-32 overflow-y-auto mb-2">
-          {filteredUsers.map(u => (
+
+        {/* User list */}
+        <div className="max-h-60 overflow-y-auto mb-4">
+          {filteredUsers.map(user => (
             <div
-              key={u.id}
-              className="flex items-center gap-2 px-2 py-1 hover:bg-blue-100 dark:hover:bg-slate-700 rounded cursor-pointer"
-              onClick={() => setSelectedUsers([...selectedUsers, u])}
-              tabIndex={0}
-              aria-label={`Pridėti narį ${u.name}`}
+              key={user.id}
+              className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+              onClick={() => handleAddMember(user.id)}
             >
-              <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">
-                {u.name[0].toUpperCase()}
-              </span>
-              <span className="text-gray-900 dark:text-white">{u.name}</span>
+              <div>
+                <div className="font-semibold">{user.name}</div>
+                <div className="text-sm text-gray-500">{user.email}</div>
+              </div>
             </div>
           ))}
         </div>
-        {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-        <button
-          className="w-full py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
-          onClick={handleAdd}
-          disabled={loading || selectedUsers.length === 0}
-          aria-disabled={loading || selectedUsers.length === 0}
-        >
-          {loading ? 'Pridedama...' : 'Pridėti'}
-        </button>
-        <button
-          className="mt-3 w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600"
-          onClick={onClose}
-        >
-          Atšaukti
-        </button>
+
+        {/* Action buttons */}
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+            disabled={isLoading}
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );
-};
-
-export default AddMemberModal; 
+} 

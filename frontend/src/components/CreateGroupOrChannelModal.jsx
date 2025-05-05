@@ -1,164 +1,147 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_URL } from '../config';
+import { getApiUrl } from '../config';
+import { useAuth } from '../contexts/AuthContext';
 
-const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+export default function CreateGroupOrChannelModal({ isOpen, onClose, onCreatePrivate, onCreateGroup }) {
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [admins, setAdmins] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [groupName, setGroupName] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`${API_URL}/api/users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setUsers(res.data);
-      } catch {
-        setUsers([]);
+        const response = await axios.get(`${getApiUrl()}api/users`);
+        const filteredUsers = response.data.filter(u => u.id !== user.id);
+        setUsers(filteredUsers);
+      } catch (error) {
+        console.error('Error fetching users:', error);
       }
     };
-    fetchUsers();
-  }, []);
 
-  const toggleUser = (id) => {
-    setSelectedUsers(sel => sel.includes(id) ? sel.filter(i => i !== id) : [...sel, id]);
-    if (!selectedUsers.includes(id)) setAdmins(admins => admins.filter(a => a !== id));
-  };
-  const toggleAdmin = (id) => {
-    setAdmins(adm => adm.includes(id) ? adm.filter(i => i !== id) : [...adm, id]);
+    if (isOpen) {
+      fetchUsers();
+    }
+  }, [isOpen, user.id]);
+
+  const handleUserSelect = (userId) => {
+    setSelectedUsers(prev => {
+      if (prev.includes(userId)) {
+        return prev.filter(id => id !== userId);
+      }
+      return [...prev, userId];
+    });
   };
 
-  const handleCreate = async () => {
-    if (!name.trim()) {
-      setError('Įveskite pavadinimą');
-      return;
-    }
-    if (selectedUsers.length === 0) {
-      setError('Pasirinkite bent vieną narį');
-      return;
-    }
-    setLoading(true);
-    setError('');
+  const handleCreatePrivate = async (userId) => {
+    setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const endpoint = '/api/group';
-      const res = await axios.post(
-        `${API_URL}${endpoint}`,
-        { name, type, description, members: selectedUsers.map(u => u.id), admins },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      onCreated && onCreated(res.data);
+      await onCreatePrivate(userId);
       onClose();
-    } catch (e) {
-      setError('Nepavyko sukurti.');
+    } catch (error) {
+      console.error('Error creating private chat:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) &&
-    !selectedUsers.some(su => su.id === u.id)
+  const handleCreateGroup = async () => {
+    if (!groupName.trim() || selectedUsers.length === 0) return;
+
+    setIsLoading(true);
+    try {
+      await onCreateGroup(groupName.trim(), selectedUsers);
+      onClose();
+    } catch (error) {
+      console.error('Error creating group chat:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="relative bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 w-full max-w-sm">
-        <button
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl font-bold focus:outline-none"
-          onClick={onClose}
-          aria-label="Uždaryti"
-        >
-          ×
-        </button>
-        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-          {type === 'group' ? 'Sukurti grupę' : 'Sukurti kanalą'}
-        </h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-4">Create New Chat</h2>
+
+        {/* Search input */}
         <input
           type="text"
-          className="w-full mb-3 px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="Pavadinimas..."
-          value={name}
-          onChange={e => setName(e.target.value)}
-          aria-label="Pavadinimas"
+          placeholder="Search users..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full p-2 border rounded mb-4"
         />
-        <textarea
-          className="w-full mb-3 px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="Aprašymas (nebūtina)"
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          rows={2}
-          aria-label="Aprašymas"
-        />
-        <input
-          type="text"
-          className="w-full mb-2 px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="Ieškoti narių..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          aria-label="Ieškoti narių"
-        />
-        <div className="max-h-32 overflow-y-auto mb-2">
-          {filteredUsers.map(u => (
+
+        {/* User list */}
+        <div className="max-h-60 overflow-y-auto mb-4">
+          {filteredUsers.map(user => (
             <div
-              key={u.id}
-              className="flex items-center gap-2 px-2 py-1 hover:bg-blue-100 dark:hover:bg-slate-700 rounded cursor-pointer"
-              onClick={() => setSelectedUsers([...selectedUsers, u])}
-              tabIndex={0}
-              aria-label={`Pridėti narį ${u.name}`}
+              key={user.id}
+              className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+              onClick={() => handleUserSelect(user.id)}
             >
-              <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">
-                {u.name[0].toUpperCase()}
-              </span>
-              <span className="text-gray-900 dark:text-white">{u.name}</span>
+              <input
+                type="checkbox"
+                checked={selectedUsers.includes(user.id)}
+                onChange={() => {}}
+                className="mr-2"
+              />
+              <div>
+                <div className="font-semibold">{user.name}</div>
+                <div className="text-sm text-gray-500">{user.email}</div>
+              </div>
             </div>
           ))}
         </div>
-        {selectedUsers.length > 0 && (
-          <div className="flex flex-col gap-2 mb-2">
-            {selectedUsers.map(u => (
-              <div key={u.id} className="flex items-center gap-2 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded-full px-2 py-1 text-xs">
-                {u.name}
-                <button onClick={() => setSelectedUsers(selectedUsers.filter(su => su.id !== u.id))} className="ml-1 text-xs" aria-label={`Pašalinti narį ${u.name}`}>×</button>
-                <label className="flex items-center gap-1 ml-2">
-                  <input
-                    type="checkbox"
-                    checked={admins.includes(u.id)}
-                    onChange={() => toggleAdmin(u.id)}
-                    className="accent-blue-600"
-                    aria-label={`Padaryti adminu: ${u.name}`}
-                  />
-                  <span>Admin</span>
-                </label>
-              </div>
-            ))}
-          </div>
-        )}
-        {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
-        <button
-          className="w-full py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
-          onClick={handleCreate}
-          disabled={loading || !name.trim() || selectedUsers.length === 0}
-          aria-disabled={loading || !name.trim() || selectedUsers.length === 0}
-        >
-          {loading ? 'Kuriama...' : (type === 'group' ? 'Sukurti grupę' : 'Sukurti kanalą')}
-        </button>
-        <button
-          className="mt-3 w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600"
-          onClick={onClose}
-        >
-          Atšaukti
-        </button>
+
+        {/* Group name input */}
+        <input
+          type="text"
+          placeholder="Group name (for group chat)"
+          value={groupName}
+          onChange={(e) => setGroupName(e.target.value)}
+          className="w-full p-2 border rounded mb-4"
+        />
+
+        {/* Action buttons */}
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+            disabled={isLoading}
+          >
+            Cancel
+          </button>
+          {selectedUsers.length === 1 ? (
+            <button
+              onClick={() => handleCreatePrivate(selectedUsers[0])}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating...' : 'Create Private Chat'}
+            </button>
+          ) : (
+            <button
+              onClick={handleCreateGroup}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              disabled={isLoading || !groupName.trim() || selectedUsers.length === 0}
+            >
+              {isLoading ? 'Creating...' : 'Create Group Chat'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
-};
-
-export default CreateGroupOrChannelModal; 
+} 
