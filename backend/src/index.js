@@ -12,9 +12,17 @@ const auth = require('./middleware/auth');
 
 const app = express();
 const server = http.createServer(app);
+
+// Čia įrašyk savo Vercel frontend URL!
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://chat-app-jade-six.vercel.app' // <-- tavo Vercel adresas
+];
+
 const io = socketIo(server, {
   cors: {
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -25,7 +33,7 @@ app.set('io', io);
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
@@ -49,4 +57,4 @@ const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});
