@@ -70,7 +70,7 @@ const Chat = () => {
 
     newSocket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
-      toast.error('Failed to connect to chat server');
+      toast.error('Nepavyko prisijungti prie chat serverio');
     });
 
     newSocket.on('disconnect', (reason) => {
@@ -168,7 +168,7 @@ const Chat = () => {
           }
         }
       } catch (error) {
-        toast.error('Failed to load chats');
+        toast.error('Nepavyko įkelti pokalbių');
       } finally {
         setLoading(false);
       }
@@ -186,7 +186,7 @@ const Chat = () => {
           });
           setMessages(response.data);
         } catch (error) {
-          toast.error('Failed to load messages');
+          toast.error('Nepavyko įkelti žinutės');
         }
       }
     };
@@ -449,7 +449,7 @@ const Chat = () => {
       );
       setSearchResults(response.data);
     } catch (error) {
-      toast.error('Failed to search messages');
+      toast.error('Nepavyko ieškoti žinutžių');
     } finally {
       setIsSearching(false);
     }
@@ -840,7 +840,7 @@ const Chat = () => {
       <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block h-full min-h-0 overflow-x-hidden`}>
         <div className="p-4 md:p-6 flex flex-col h-full min-h-0 overflow-x-hidden">
           <div className="flex justify-between items-center mb-4 md:mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Chats</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
             <button
               className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow hover:from-blue-600 hover:to-indigo-700 transition font-semibold text-sm md:text-base"
               onClick={() => setShowNewModal(true)}
@@ -850,7 +850,7 @@ const Chat = () => {
           </div>
           <input
             type="text"
-            placeholder="Search chats..."
+            placeholder="Ieškoti pokalbių..."
             className="w-full mb-4 md:mb-6 px-3 py-2 md:px-4 md:py-3 rounded-xl border-none bg-white/40 dark:bg-slate-700/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow text-sm md:text-base"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -1116,7 +1116,7 @@ const Chat = () => {
                               <button
                                 className="ml-1 md:ml-2 text-lg md:text-xl hover:scale-110 transition-transform"
                                 onClick={() => setShowEmojiPickerFor(message.id)}
-                                title="Add reaction"
+                                title="Pridėti reakciją"
                               >
                                 😊
                               </button>
@@ -1165,7 +1165,7 @@ const Chat = () => {
                     onFocus={handleTyping}
                     onBlur={handleStopTyping}
                     className="flex-1 rounded-xl border-none px-3 py-2 md:px-4 md:py-3 text-sm md:text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white shadow"
-                    placeholder="Type a message..."
+                    placeholder="Rašyti žinutę..."
                   />
                   <input
                     type="file"
@@ -1181,7 +1181,7 @@ const Chat = () => {
                   <label
                     htmlFor="file-upload"
                     className="p-2 md:p-3 rounded-xl bg-white/60 dark:bg-slate-700/80 hover:bg-white/80 dark:hover:bg-slate-700 cursor-pointer"
-                    title="Upload file"
+                    title="Įkelti failą"
                   >
                     {uploadingFile ? (
                       <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-blue-500"></div>

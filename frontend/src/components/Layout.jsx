@@ -10,7 +10,7 @@ const Layout = () => {
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center" style={{ height: `${HEADER_HEIGHT}px` }}>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Chat App
+              Pokalbių sistema
             </h1>
             <ThemeToggle />
           </div>

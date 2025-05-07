@@ -80,10 +80,10 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', data.token);
         return { success: true };
       } else {
-        return { success: false, error: data.message || 'Login failed' };
+        return { success: false, error: data.message || 'Prisijungimas nepavyko' };
       }
     } catch (error) {
-      return { success: false, error: 'Network error' };
+      return { success: false, error: 'Tinklo klaida' };
     }
   };
 
@@ -104,10 +104,10 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', data.token);
         return { success: true };
       } else {
-        return { success: false, error: data.message || 'Registration failed' };
+        return { success: false, error: data.message || 'Registracija nepavyko' };
       }
     } catch (error) {
-      return { success: false, error: 'Network error' };
+      return { success: false, error: 'Tinklo klaida' };
     }
   };
 

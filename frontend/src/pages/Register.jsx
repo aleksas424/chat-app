@@ -17,7 +17,7 @@ const Register = () => {
     e.preventDefault();
     
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error('Slaptažodžiai nesutampa');
       return;
     }
 
@@ -26,7 +26,7 @@ const Register = () => {
     setLoading(false);
 
     if (result.success) {
-      toast.success('Account created successfully');
+      toast.success('Paskyra sėkmingai sukurta');
       navigate('/');
     } else {
       toast.error(result.error);
@@ -43,14 +43,14 @@ const Register = () => {
       >
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            Create your account
+            Sukurkite savo paskyrą
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="name" className="sr-only">
-                Full name
+                Vardas ir pavardė
               </label>
               <input
                 id="name"
@@ -61,12 +61,12 @@ const Register = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
-                placeholder="Full name"
+                placeholder="Vardas ir pavardė"
               />
             </div>
             <div>
               <label htmlFor="email" className="sr-only">
-                Email address
+                El. pašto adresas
               </label>
               <input
                 id="email"
@@ -77,12 +77,12 @@ const Register = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
-                placeholder="Email address"
+                placeholder="El. pašto adresas"
               />
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
-                Password
+                Slaptažodis
               </label>
               <input
                 id="password"
@@ -93,12 +93,12 @@ const Register = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
-                placeholder="Password"
+                placeholder="Slaptažodis"
               />
             </div>
             <div>
               <label htmlFor="confirm-password" className="sr-only">
-                Confirm password
+                Patvirtinkite slaptažodį
               </label>
               <input
                 id="confirm-password"
@@ -109,7 +109,7 @@ const Register = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
-                placeholder="Confirm password"
+                placeholder="Patvirtinkite slaptažodį"
               />
             </div>
           </div>
@@ -120,7 +120,7 @@ const Register = () => {
               disabled={loading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? 'Kuriama paskyra...' : 'Sukurti paskyrą'}
             </button>
           </div>
 
@@ -129,7 +129,7 @@ const Register = () => {
               to="/login"
               className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
             >
-              Already have an account? Sign in
+              Jau turite paskyrą? Prisijunkite
             </Link>
           </div>
         </form>

@@ -135,7 +135,7 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
                     className="accent-blue-600"
                     aria-label={`Padaryti adminu: ${u.name}`}
                   />
-                  <span>Admin</span>
+                  <span>Administratorius</span>
                 </label>
               </div>
             ))}

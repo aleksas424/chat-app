@@ -32,9 +32,9 @@ export const useSocket = (user, onMessage) => {
 
     newSocket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
-      setConnectionError('Failed to connect to chat server. Retrying...');
+      setConnectionError('Nepavyko prisijungti prie chat serverio');
       setIsReconnecting(true);
-      toast.error('Connection error. Attempting to reconnect...');
+      toast.error('Nepavyko prisijungti. Patikrinkite savo ryšį.');
     });
 
     newSocket.on('disconnect', (reason) => {
@@ -55,14 +55,14 @@ export const useSocket = (user, onMessage) => {
 
     newSocket.on('reconnect_error', (error) => {
       console.error('Socket reconnection error:', error);
-      setConnectionError('Failed to reconnect to chat server');
-      toast.error('Failed to reconnect. Please check your connection.');
+      setConnectionError('Nepavyko prisijungti prie chat serverio');
+      toast.error('Nepavyko prisijungti. Patikrinkite savo ryšį.');
     });
 
     newSocket.on('reconnect_failed', () => {
       console.error('Socket reconnection failed');
-      setConnectionError('Failed to reconnect to chat server. Please refresh the page.');
-      toast.error('Connection failed. Please refresh the page.');
+      setConnectionError('Nepavyko prisijungti prie chat serverio. Prašome atnaujinti puslapį.');
+      toast.error('Ryšys nepavyko. Prašome atnaujinti puslapį.');
     });
 
     if (onMessage) {
@@ -88,7 +88,7 @@ export const useSocket = (user, onMessage) => {
 
   const sendMessage = useCallback((chatId, content) => {
     if (!socket) {
-      toast.error('Not connected to server');
+      toast.error('Neprisijungta prie serverio');
       return false;
     }
     socket.emit('message', { chatId, content });
