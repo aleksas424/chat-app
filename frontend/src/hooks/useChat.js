@@ -17,7 +17,7 @@ export const useChat = (user) => {
       const chatsWithLast = await Promise.all(response.data.map(async (chat) => {
         try {
           const msgRes = await axios.get(`${getApiUrl()}api/chat/${chat.id}/messages`);
-          const lastMsg = msgRes.data[msgRes.data.length - 1];
+          const lastMsg = Array.isArray(msgRes.data) && msgRes.data.length > 0 ? msgRes.data[msgRes.data.length - 1] : null;
           return { ...chat, lastMessage: lastMsg };
         } catch {
           return { ...chat, lastMessage: null };
