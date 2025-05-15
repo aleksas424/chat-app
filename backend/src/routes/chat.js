@@ -307,7 +307,7 @@ router.patch('/:chatId/messages/:messageId', auth, async (req, res) => {
 
     // Update the message
     await pool.query(
-      'UPDATE messages SET content = ?, edited = true WHERE id = ?',
+      'UPDATE messages SET content = ?, is_edited = true, edited_at = NOW() WHERE id = ?',
       [content, messageId]
     );
 
