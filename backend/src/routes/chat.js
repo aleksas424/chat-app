@@ -132,14 +132,14 @@ router.post('/:chatId/messages', auth, async (req, res) => {
 
     // Get the full message with sender info
     const [rows] = await pool.query(
-      `SELECT m.*, u.name as sender_name FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.id = ?`,
+      `SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.id = ?`,
       [result.insertId]
     );
-    const newMessage = rows[0];
+    const newMessage = rows && rows.length > 0 ? rows[0] : null;
 
     // Emit socket event to all clients (optionally, only to chat members)
     const io = req.app.get('io');
-    if (io) {
+    if (io && newMessage) {
       io.emit('new-message', {
         id: newMessage.id,
         chatId: newMessage.chat_id,
@@ -150,13 +150,7 @@ router.post('/:chatId/messages', auth, async (req, res) => {
       });
     }
 
-    res.status(201).json({
-      messageId: result.insertId,
-      chatId,
-      content,
-      senderId: userId,
-      createdAt: new Date()
-    });
+    res.status(201).json(newMessage);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -325,18 +319,7 @@ router.patch('/:chatId/messages/:messageId', auth, async (req, res) => {
       WHERE m.id = ?
     `, [messageId]);
 
-    // Emit socket event
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('message-edited', {
-        messageId: Number(messageId),
-        chatId: Number(chatId),
-        content,
-        edited: true
-      });
-    }
-
-    res.json(updatedMessage[0]);
+    res.json(updatedMessage && updatedMessage.length > 0 ? updatedMessage[0] : null);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -479,11 +462,11 @@ router.post('/:chatId/messages/file', auth, async (req, res) => {
       JOIN users u ON m.sender_id = u.id
       WHERE m.id = ?
     `, [result.insertId]);
-    const newMessage = rows[0];
+    const newMessage = rows && rows.length > 0 ? rows[0] : null;
 
     // Emit socket event
     const io = req.app.get('io');
-    if (io) {
+    if (io && newMessage) {
       io.emit('new-message', {
         id: newMessage.id,
         chatId: newMessage.chat_id,
@@ -742,7 +725,7 @@ router.post('/:chatId/messages/:messageId/pin', auth, async (req, res) => {
       });
     }
 
-    res.json(pinnedMessage[0]);
+    res.json(pinnedMessage && pinnedMessage.length > 0 ? pinnedMessage[0] : null);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -816,7 +799,7 @@ router.get('/:chatId/pinned-message', auth, async (req, res) => {
       WHERE m.chat_id = ? AND m.pinned = true
     `, [chatId]);
 
-    res.json(pinnedMessage[0] || null);
+    res.json(pinnedMessage && pinnedMessage.length > 0 ? pinnedMessage[0] : null);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
