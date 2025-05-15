@@ -100,11 +100,33 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
+        return { success: true };
+      } else {
+        return { success: false, error: data.message || 'Registracija nepavyko' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Tinklo klaida' };
+    }
+  };
+
+  const verifyEmail = async (email, code) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, code }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
         setUser(data.user);
         localStorage.setItem('token', data.token);
         return { success: true };
       } else {
-        return { success: false, error: data.message || 'Registracija nepavyko' };
+        return { success: false, error: data.message || 'Verifikacija nepavyko' };
       }
     } catch (error) {
       return { success: false, error: 'Tinklo klaida' };
@@ -117,7 +139,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, verifyEmail, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

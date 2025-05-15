@@ -9,8 +9,10 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const [showVerification, setShowVerification] = useState(false);
+  const { register, verifyEmail } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -26,12 +28,75 @@ const Register = () => {
     setLoading(false);
 
     if (result.success) {
+      setShowVerification(true);
+      toast.success('Verifikacijos kodas išsiųstas į jūsų email');
+    } else {
+      toast.error(result.error);
+    }
+  };
+
+  const handleVerification = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const result = await verifyEmail(email, verificationCode);
+    setLoading(false);
+
+    if (result.success) {
       toast.success('Paskyra sėkmingai sukurta');
       navigate('/');
     } else {
       toast.error(result.error);
     }
   };
+
+  if (showVerification) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-md w-full space-y-8"
+        >
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+              Įveskite verifikacijos kodą
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+              Kodas išsiųstas į {email}
+            </p>
+          </div>
+          <form className="mt-8 space-y-6" onSubmit={handleVerification}>
+            <div>
+              <label htmlFor="verification-code" className="sr-only">
+                Verifikacijos kodas
+              </label>
+              <input
+                id="verification-code"
+                name="verification-code"
+                type="text"
+                required
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
+                placeholder="Įveskite 6 skaitmenų kodą"
+              />
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Tikrinama...' : 'Patvirtinti'}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">

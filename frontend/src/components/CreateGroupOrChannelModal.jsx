@@ -4,7 +4,6 @@ import { API_URL } from '../config';
 
 const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [admins, setAdmins] = useState([]);
@@ -51,7 +50,7 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
       const endpoint = '/api/group';
       const res = await axios.post(
         `${API_URL}${endpoint}`,
-        { name, type, description, members: selectedUsers.map(u => u.id), admins },
+        { name, type, members: selectedUsers.map(u => u.id), admins },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       onCreated && onCreated(res.data);
@@ -88,14 +87,6 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
           value={name}
           onChange={e => setName(e.target.value)}
           aria-label="Pavadinimas"
-        />
-        <textarea
-          className="w-full mb-3 px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="Aprašymas (nebūtina)"
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          rows={2}
-          aria-label="Aprašymas"
         />
         <input
           type="text"

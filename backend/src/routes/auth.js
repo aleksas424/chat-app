@@ -4,6 +4,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const auth = require('../middleware/auth');
+const { sendVerificationEmail } = require('./emailVerification');
+
+// Laikinai saugome verifikacijos kodus (gali būti pakeista į duomenų bazę)
+const verificationCodes = new Map();
 
 // Register new user
 router.post('/register', async (req, res) => {
@@ -24,15 +28,57 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Siunčiame verifikacijos email
+    const verificationCode = await sendVerificationEmail(email);
+    
+    // Išsaugome verifikacijos kodą (laikinai)
+    verificationCodes.set(email, {
+      code: verificationCode,
+      password: hashedPassword,
+      name: name,
+      timestamp: Date.now()
+    });
+
+    res.status(200).json({ message: 'Verifikacijos kodas išsiųstas į jūsų email' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Verifikacijos endpoint'as
+router.post('/verify', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    const userData = verificationCodes.get(email);
+
+    if (!userData) {
+      return res.status(400).json({ message: 'Neteisingas email arba kodas' });
+    }
+
+    // Tikriname ar kodas teisingas
+    if (userData.code !== code) {
+      return res.status(400).json({ message: 'Neteisingas verifikacijos kodas' });
+    }
+
+    // Tikriname ar kodas dar galioja (15 minučių)
+    if (Date.now() - userData.timestamp > 15 * 60 * 1000) {
+      verificationCodes.delete(email);
+      return res.status(400).json({ message: 'Verifikacijos kodas nebegalioja' });
+    }
+
     // Create new user
     const [result] = await pool.query(
       'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-      [name, email, hashedPassword]
+      [userData.name, email, userData.password]
     );
+
+    // Išvalome laikiną verifikacijos duomenis
+    verificationCodes.delete(email);
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: result.insertId, name, email },
+      { id: result.insertId, name: userData.name, email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -41,12 +87,12 @@ router.post('/register', async (req, res) => {
       token,
       user: {
         id: result.insertId,
-        name,
+        name: userData.name,
         email
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Verifikacijos klaida:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
