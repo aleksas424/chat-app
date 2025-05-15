@@ -13,7 +13,7 @@ router.get('/', auth, async (req, res) => {
     const [privateChats] = await pool.query(`
       SELECT c.id, c.type, c.name, c.created_at,
              CASE 
-               WHEN c.type = 'private' THEN u.name
+               WHEN c.type = 'private' THEN CONCAT(u.first_name, ' ', u.last_name)
                ELSE c.name
              END as display_name
       FROM chats c
@@ -199,7 +199,7 @@ router.delete('/:chatId', auth, async (req, res) => {
 router.get('/messages', async (req, res) => {
   try {
     const [messages] = await pool.query(`
-      SELECT m.*, u.name as user_name 
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as user_name 
       FROM messages m 
       JOIN users u ON m.sender_id = u.id 
       ORDER BY m.created_at DESC 
@@ -537,7 +537,7 @@ router.post('/status', auth, async (req, res) => {
 router.get('/statuses', auth, async (req, res) => {
   try {
     const [users] = await pool.query(`
-      SELECT id, name, status, last_seen
+      SELECT id, CONCAT(first_name, ' ', last_name) as name, status, last_seen
       FROM users
       WHERE id IN (
         SELECT DISTINCT user_id

@@ -166,7 +166,7 @@ router.get('/:chatId/members', auth, async (req, res) => {
     const { chatId } = req.params;
 
     const [members] = await pool.query(`
-      SELECT u.id, u.name, u.email, cm.role
+      SELECT u.id, u.first_name, u.last_name, u.email, cm.role
       FROM chat_members cm
       JOIN users u ON cm.user_id = u.id
       WHERE cm.chat_id = ?
