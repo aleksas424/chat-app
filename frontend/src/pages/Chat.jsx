@@ -166,6 +166,8 @@ const Chat = () => {
           if (socket) {
             socket.emit('join-chats', chatsWithLast.map(chat => chat.id));
           }
+        } else {
+          setSelectedChat(null);
         }
       } catch (error) {
         toast.error('Nepavyko įkelti pokalbių');
@@ -873,7 +875,12 @@ const Chat = () => {
               >
                 {/* Avatar */}
                 <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                  {(chat.display_name.split(' ')[0][0] || '').toUpperCase()}{(chat.display_name.split(' ')[1][0] || '').toUpperCase()}
+                  {(() => {
+                    const parts = (chat.display_name || '').split(' ');
+                    const first = (parts[0] && parts[0][0]) ? parts[0][0].toUpperCase() : '';
+                    const last = (parts[1] && parts[1][0]) ? parts[1][0].toUpperCase() : '';
+                    return first + last;
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1 md:gap-2">
@@ -908,7 +915,12 @@ const Chat = () => {
                     </svg>
                   </button>
                   <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                    {(selectedChat.display_name.split(' ')[0][0] || '').toUpperCase()}{(selectedChat.display_name.split(' ')[1][0] || '').toUpperCase()}
+                    {(() => {
+                      const parts = (selectedChat.display_name || '').split(' ');
+                      const first = (parts[0] && parts[0][0]) ? parts[0][0].toUpperCase() : '';
+                      const last = (parts[1] && parts[1][0]) ? parts[1][0].toUpperCase() : '';
+                      return first + last;
+                    })()}
                   </div>
                   <div>
                     <h2 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white">
