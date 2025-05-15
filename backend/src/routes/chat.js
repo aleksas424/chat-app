@@ -51,7 +51,7 @@ router.get('/:chatId/messages', auth, async (req, res) => {
 
     // Get messages
     const [messages] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.chat_id = ?
@@ -319,7 +319,7 @@ router.patch('/:chatId/messages/:messageId', auth, async (req, res) => {
 
     // Get the updated message
     const [updatedMessage] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.id = ?
@@ -411,7 +411,7 @@ router.get('/:chatId/messages/search', auth, async (req, res) => {
 
     // Search messages
     const [messages] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.chat_id = ? AND m.content LIKE ?
@@ -622,7 +622,7 @@ router.get('/:chatId/messages/:messageId/reads', auth, async (req, res) => {
 
     // Get read status
     const [reads] = await pool.query(`
-      SELECT mr.*, u.name as user_name
+      SELECT mr.*, CONCAT(u.first_name, ' ', u.last_name) as user_name
       FROM message_reads mr
       JOIN users u ON mr.user_id = u.id
       WHERE mr.message_id = ?
@@ -727,7 +727,7 @@ router.post('/:chatId/messages/:messageId/pin', auth, async (req, res) => {
 
     // Get the pinned message
     const [pinnedMessage] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.id = ?
@@ -810,7 +810,7 @@ router.get('/:chatId/pinned-message', auth, async (req, res) => {
 
     // Get pinned message
     const [pinnedMessage] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.chat_id = ? AND m.pinned = true
