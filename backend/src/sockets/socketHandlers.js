@@ -12,7 +12,8 @@ const setupSocketHandlers = (io) => {
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.userId = decoded.id;
-      socket.userName = decoded.name;
+      socket.userFirstName = decoded.firstName;
+      socket.userLastName = decoded.lastName;
       next();
     } catch (error) {
       next(new Error('Authentication error'));
@@ -36,7 +37,7 @@ const setupSocketHandlers = (io) => {
         const message = {
           id: result.insertId,
           text,
-          user: socket.userName,
+          user: `${socket.userFirstName} ${socket.userLastName}`,
           userId: socket.userId,
           timestamp: new Date()
         };

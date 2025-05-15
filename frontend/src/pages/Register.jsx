@@ -5,7 +5,8 @@ import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
 const Register = () => {
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -15,16 +16,39 @@ const Register = () => {
   const { register, verifyEmail } = useAuth();
   const navigate = useNavigate();
 
+  const validateName = (name) => {
+    if (name.length > 15) {
+      return 'Vardas negali būti ilgesnis nei 15 simbolių';
+    }
+    if (/\d/.test(name)) {
+      return 'Varde negali būti skaičių';
+    }
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    const firstNameError = validateName(firstName);
+    const lastNameError = validateName(lastName);
+
+    if (firstNameError) {
+      toast.error(firstNameError);
+      return;
+    }
+
+    if (lastNameError) {
+      toast.error(lastNameError);
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error('Slaptažodžiai nesutampa');
       return;
     }
 
     setLoading(true);
-    const result = await register(name, email, password);
+    const result = await register({ firstName, lastName }, email, password);
     setLoading(false);
 
     if (result.success) {
@@ -114,19 +138,37 @@ const Register = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="name" className="sr-only">
-                Vardas ir pavardė
+              <label htmlFor="firstName" className="sr-only">
+                Vardas
               </label>
               <input
-                id="name"
-                name="name"
+                id="firstName"
+                name="firstName"
                 type="text"
-                autoComplete="name"
+                autoComplete="given-name"
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
-                placeholder="Vardas ir pavardė"
+                placeholder="Vardas"
+                maxLength={15}
+              />
+            </div>
+            <div>
+              <label htmlFor="lastName" className="sr-only">
+                Pavardė
+              </label>
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                autoComplete="family-name"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
+                placeholder="Pavardė"
+                maxLength={15}
               />
             </div>
             <div>

@@ -12,16 +12,20 @@ const verificationCodes = new Map();
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { firstName, lastName, email, password } = req.body;
 
     // Check if user already exists
     const [existingUsers] = await pool.query(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
+      'SELECT * FROM users WHERE email = ? OR (first_name = ? AND last_name = ?)',
+      [email, firstName, lastName]
     );
 
     if (existingUsers.length > 0) {
-      return res.status(400).json({ message: 'User already exists' });
+      if (existingUsers[0].email === email) {
+        return res.status(400).json({ message: 'Vartotojas su tokiu el. paštu jau egzistuoja' });
+      } else {
+        return res.status(400).json({ message: 'Vartotojas su tokiu vardu ir pavarde jau egzistuoja' });
+      }
     }
 
     // Hash password
@@ -35,7 +39,8 @@ router.post('/register', async (req, res) => {
     verificationCodes.set(email, {
       code: verificationCode,
       password: hashedPassword,
-      name: name,
+      firstName: firstName,
+      lastName: lastName,
       timestamp: Date.now()
     });
 
@@ -69,8 +74,8 @@ router.post('/verify', async (req, res) => {
 
     // Create new user
     const [result] = await pool.query(
-      'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-      [userData.name, email, userData.password]
+      'INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)',
+      [userData.firstName, userData.lastName, email, userData.password]
     );
 
     // Išvalome laikiną verifikacijos duomenis
@@ -78,7 +83,12 @@ router.post('/verify', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: result.insertId, name: userData.name, email },
+      { 
+        id: result.insertId, 
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email 
+      },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -87,7 +97,8 @@ router.post('/verify', async (req, res) => {
       token,
       user: {
         id: result.insertId,
-        name: userData.name,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
         email
       }
     });
@@ -137,7 +148,12 @@ router.post('/login', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, name: user.name, email: user.email },
+      { 
+        id: user.id, 
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email 
+      },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -146,7 +162,8 @@ router.post('/login', async (req, res) => {
       token,
       user: {
         id: user.id,
-        name: user.name,
+        firstName: user.first_name,
+        lastName: user.last_name,
         email: user.email
       }
     });
