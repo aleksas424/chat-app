@@ -7,7 +7,8 @@ import axios from 'axios';
 
 const Profile = () => {
   const { user, logout } = useAuth();
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -18,7 +19,8 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      setName(user.name);
+      setFirstName(user.first_name || '');
+      setLastName(user.last_name || '');
       setEmail(user.email);
     }
   }, [user]);
@@ -33,7 +35,8 @@ const Profile = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          name,
+          first_name: firstName,
+          last_name: lastName,
           email,
           password: password || undefined
         })
@@ -99,14 +102,27 @@ const Profile = () => {
           )}
           <form onSubmit={handleUpdate} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Vardas
               </label>
               <input
                 type="text"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Pavardė
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
                 required
               />

@@ -299,7 +299,7 @@ const Chat = () => {
       const newChat = {
         id: response.data.chatId,
         type: 'private',
-        display_name: users.find(u => u.id === userId)?.name || 'Privatus',
+        display_name: users.find(u => u.id === userId)?.first_name + ' ' + users.find(u => u.id === userId)?.last_name || 'Privatus',
         lastMessage: null
       };
       setChats(prev => [...prev, newChat]);
@@ -873,7 +873,7 @@ const Chat = () => {
               >
                 {/* Avatar */}
                 <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                  {typeIcon[chat.type] || '💬'}
+                  {(chat.display_name.split(' ')[0][0] || '').toUpperCase()}{(chat.display_name.split(' ')[1][0] || '').toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1 md:gap-2">
@@ -908,7 +908,7 @@ const Chat = () => {
                     </svg>
                   </button>
                   <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                    {typeIcon[selectedChat.type] || '💬'}
+                    {(selectedChat.display_name.split(' ')[0][0] || '').toUpperCase()}{(selectedChat.display_name.split(' ')[1][0] || '').toUpperCase()}
                   </div>
                   <div>
                     <h2 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white">
@@ -1234,9 +1234,9 @@ const Chat = () => {
               <ul className="space-y-2">
                 {ownerMembers.map(member => (
                   <li key={member.id} className="flex items-center gap-2">
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">{member.name[0].toUpperCase()}</div>
+                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">{(member.first_name[0] || '')}{(member.last_name[0] || '').toUpperCase()}</div>
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{member.first_name + ' ' + member.last_name}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-300">{member.role}</div>
                     </div>
                   </li>
@@ -1246,9 +1246,9 @@ const Chat = () => {
               <ul className="space-y-2">
                 {adminMembers.map(member => (
                   <li key={member.id} className="flex items-center gap-2">
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">{member.name[0].toUpperCase()}</div>
+                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">{(member.first_name[0] || '')}{(member.last_name[0] || '').toUpperCase()}</div>
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{member.first_name + ' ' + member.last_name}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-300">{member.role}</div>
                     </div>
                     {myRole === 'owner' && member.id !== user.id && (
@@ -1264,9 +1264,9 @@ const Chat = () => {
               <ul className="space-y-2">
                 {memberMembers.map(member => (
                   <li key={member.id} className="flex items-center gap-2">
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">{member.name[0].toUpperCase()}</div>
+                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">{(member.first_name[0] || '')}{(member.last_name[0] || '').toUpperCase()}</div>
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-white">{member.name}</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{member.first_name + ' ' + member.last_name}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-300">{member.role}</div>
                     </div>
                     {(myRole === 'owner' || (myRole === 'admin' && member.role === 'member')) && member.id !== user.id && (
@@ -1457,7 +1457,7 @@ const Chat = () => {
               aria-label="Ieškoti narių"
             />
             <div className="max-h-48 overflow-y-auto mb-2">
-              {users.filter(u => u.name.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
+              {users.filter(u => (u.first_name + ' ' + u.last_name).toLowerCase().includes(userSearch.toLowerCase())).map(u => (
                 <div
                   key={u.id}
                   className="flex items-center gap-2 px-2 py-2 hover:bg-blue-100 dark:hover:bg-slate-700 rounded cursor-pointer"
@@ -1466,12 +1466,12 @@ const Chat = () => {
                     setShowUserSelect(false);
                   }}
                   tabIndex={0}
-                  aria-label={`Sukurti pokalbį su ${u.name}`}
+                  aria-label={`Sukurti pokalbį su ${u.first_name + ' ' + u.last_name}`}
                 >
                   <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">
-                    {u.name[0].toUpperCase()}
+                    {(u.first_name[0] || '').toUpperCase()}{(u.last_name[0] || '').toUpperCase()}
                   </span>
-                  <span className="text-gray-900 dark:text-white">{u.name}</span>
+                  <span className="text-gray-900 dark:text-white">{u.first_name + ' ' + u.last_name}</span>
                 </div>
               ))}
             </div>

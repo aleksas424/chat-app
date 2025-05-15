@@ -63,7 +63,7 @@ const AddMemberModal = ({ chatId, onClose, onAdded, existingMembers = [] }) => {
 
   const existingIds = existingMembers.map(m => m.id);
   const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) &&
+    (u.first_name + ' ' + u.last_name).toLowerCase().includes(search.toLowerCase()) &&
     !selectedUsers.some(su => su.id === u.id) &&
     !existingIds.includes(u.id)
   );
@@ -91,8 +91,8 @@ const AddMemberModal = ({ chatId, onClose, onAdded, existingMembers = [] }) => {
           <div className="flex flex-wrap gap-2 mb-2">
             {selectedUsers.map(u => (
               <span key={u.id} className="flex items-center gap-1 px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded-full text-xs">
-                {u.name}
-                <button onClick={() => setSelectedUsers(selectedUsers.filter(su => su.id !== u.id))} className="ml-1 text-xs" aria-label={`Pašalinti narį ${u.name}`}>×</button>
+                {u.first_name + ' ' + u.last_name}
+                <button onClick={() => setSelectedUsers(selectedUsers.filter(su => su.id !== u.id))} className="ml-1 text-xs" aria-label={`Pašalinti narį ${(u.first_name + ' ' + u.last_name)}`}>×</button>
               </span>
             ))}
           </div>
@@ -104,12 +104,12 @@ const AddMemberModal = ({ chatId, onClose, onAdded, existingMembers = [] }) => {
               className="flex items-center gap-2 px-2 py-1 hover:bg-blue-100 dark:hover:bg-slate-700 rounded cursor-pointer"
               onClick={() => setSelectedUsers([...selectedUsers, u])}
               tabIndex={0}
-              aria-label={`Pridėti narį ${u.name}`}
+              aria-label={`Pridėti narį ${(u.first_name + ' ' + u.last_name)}`}
             >
               <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">
-                {u.name[0].toUpperCase()}
+                {(u.first_name[0] || '').toUpperCase()}{(u.last_name[0] || '').toUpperCase()}
               </span>
-              <span className="text-gray-900 dark:text-white">{u.name}</span>
+              <span className="text-gray-900 dark:text-white">{u.first_name + ' ' + u.last_name}</span>
             </div>
           ))}
         </div>
