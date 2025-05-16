@@ -760,7 +760,7 @@ const Chat = () => {
     }
   };
 
-  // 1. Emoji reakcijų siuntimas į backend (toggle)
+  // 1. Emoji reakcijų siuntimas į backend (viena reakcija per vartotoją)
   const handleAddReaction = async (messageId, emoji) => {
     const userId = user.id;
     const reactions = messageReactions[messageId] || [];
