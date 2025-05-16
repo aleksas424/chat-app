@@ -762,14 +762,26 @@ const Chat = () => {
 
   // 1. Emoji reakcijų siuntimas į backend (toggle)
   const handleAddReaction = async (messageId, emoji) => {
+    const userId = user.id;
+    const reactions = messageReactions[messageId] || [];
+    const userReaction = reactions.find(r => r.user_id === userId);
+
+    // Jei jau pasirinkta ta pati emoji, nieko nedaryti
+    if (userReaction && userReaction.emoji === emoji) {
+      setShowEmojiPicker(false);
+      setSelectedMessageForEmoji(null);
+      return;
+    }
+
     try {
-      // Pridėti arba atnaujinti reakciją
+      // Pridėti arba pakeisti reakciją
       await axios.post(
         `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
         { emoji },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      setShowEmojiPickerFor(null);
+      setShowEmojiPicker(false);
+      setSelectedMessageForEmoji(null);
     } catch (error) {
       toast.error('Nepavyko pakeisti reakcijos');
     }
