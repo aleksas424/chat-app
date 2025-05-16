@@ -220,4 +220,117 @@ router.delete('/:chatId', auth, async (req, res) => {
   }
 });
 
+// Delete message (admin/owner only)
+router.delete('/:chatId/messages/:messageId', auth, async (req, res) => {
+  try {
+    const { chatId, messageId } = req.params;
+    const currentUserId = req.user.id;
+
+    // Check user's role
+    const [currentUserRole] = await pool.query(
+      'SELECT role FROM chat_members WHERE chat_id = ? AND user_id = ?',
+      [chatId, currentUserId]
+    );
+
+    if (currentUserRole.length === 0) {
+      return res.status(403).json({ message: 'Not a member of this chat' });
+    }
+
+    // Get message info
+    const [message] = await pool.query(
+      'SELECT sender_id FROM messages WHERE id = ? AND chat_id = ?',
+      [messageId, chatId]
+    );
+
+    if (message.length === 0) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    // Check permissions
+    const isOwner = currentUserRole[0].role === 'owner';
+    const isAdmin = currentUserRole[0].role === 'admin';
+    const isMessageOwner = message[0].sender_id === currentUserId;
+
+    if (!isOwner && !isAdmin && !isMessageOwner) {
+      return res.status(403).json({ message: 'Not authorized to delete this message' });
+    }
+
+    // Delete message
+    await pool.query(
+      'DELETE FROM messages WHERE id = ? AND chat_id = ?',
+      [messageId, chatId]
+    );
+
+    res.json({ message: 'Message deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete all messages in chat (owner only)
+router.delete('/:chatId/messages', auth, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const currentUserId = req.user.id;
+
+    // Check if user is owner
+    const [currentUserRole] = await pool.query(
+      'SELECT role FROM chat_members WHERE chat_id = ? AND user_id = ?',
+      [chatId, currentUserId]
+    );
+
+    if (currentUserRole.length === 0 || currentUserRole[0].role !== 'owner') {
+      return res.status(403).json({ message: 'Only owner can delete all messages' });
+    }
+
+    // Delete all messages
+    await pool.query(
+      'DELETE FROM messages WHERE chat_id = ?',
+      [chatId]
+    );
+
+    res.json({ message: 'All messages deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update message reaction
+router.put('/:chatId/messages/:messageId/reaction', auth, async (req, res) => {
+  try {
+    const { chatId, messageId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.user.id;
+
+    // Check if user is a member of the chat
+    const [member] = await pool.query(
+      'SELECT * FROM chat_members WHERE chat_id = ? AND user_id = ?',
+      [chatId, userId]
+    );
+
+    if (!member.length) {
+      return res.status(403).json({ message: 'Not a member of this chat' });
+    }
+
+    // Update existing reaction
+    await pool.query(
+      'UPDATE message_reactions SET emoji = ? WHERE message_id = ? AND user_id = ?',
+      [emoji, messageId, userId]
+    );
+
+    // Get updated reactions
+    const [reactions] = await pool.query(
+      'SELECT * FROM message_reactions WHERE message_id = ?',
+      [messageId]
+    );
+
+    res.json({ reactions });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router; 
