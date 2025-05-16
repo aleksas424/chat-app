@@ -251,6 +251,9 @@ router.delete('/:chatId/messages/:messageId', auth, async (req, res) => {
     const isAdmin = currentUserRole[0].role === 'admin';
     const isMessageOwner = message[0].sender_id === currentUserId;
 
+    // Owner gali ištrinti bet kurią žinutę
+    // Admin gali ištrinti bet kurią žinutę
+    // Vartotojas gali ištrinti tik savo žinutes
     if (!isOwner && !isAdmin && !isMessageOwner) {
       return res.status(403).json({ message: 'Not authorized to delete this message' });
     }
@@ -259,6 +262,12 @@ router.delete('/:chatId/messages/:messageId', auth, async (req, res) => {
     await pool.query(
       'DELETE FROM messages WHERE id = ? AND chat_id = ?',
       [messageId, chatId]
+    );
+
+    // Delete associated reactions
+    await pool.query(
+      'DELETE FROM message_reactions WHERE message_id = ?',
+      [messageId]
     );
 
     res.json({ message: 'Message deleted successfully' });

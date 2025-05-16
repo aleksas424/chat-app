@@ -786,7 +786,11 @@ const Chat = () => {
       }
       setShowEmojiPickerFor(null);
     } catch (error) {
-      toast.error('Nepavyko pakeisti reakcijos');
+      if (error.response?.status === 403) {
+        toast.error('Jūs jau turite reakciją šiai žinutei');
+      } else {
+        toast.error('Nepavyko pakeisti reakcijos');
+      }
     }
   };
 
