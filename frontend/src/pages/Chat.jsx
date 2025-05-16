@@ -762,35 +762,16 @@ const Chat = () => {
 
   // 1. Emoji reakcijų siuntimas į backend (toggle)
   const handleAddReaction = async (messageId, emoji) => {
-    const reactions = messageReactions[messageId] || [];
-    const userId = user.id;
-    
-    // Patikrinti ar vartotojas jau turi reakciją
-    const existingReaction = reactions.find(r => r.user_id === userId);
-    
     try {
-      if (existingReaction) {
-        // Jei vartotojas jau turi reakciją, atnaujinti ją
-        await axios.put(
-          `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
-          { emoji },
-          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-        );
-      } else {
-        // Jei vartotojas neturi reakcijos, pridėti naują
-        await axios.post(
-          `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
-          { emoji },
-          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-        );
-      }
+      // Pridėti arba atnaujinti reakciją
+      await axios.post(
+        `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
+        { emoji },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
       setShowEmojiPickerFor(null);
     } catch (error) {
-      if (error.response?.status === 403) {
-        toast.error('Jūs jau turite reakciją šiai žinutei');
-      } else {
-        toast.error('Nepavyko pakeisti reakcijos');
-      }
+      toast.error('Nepavyko pakeisti reakcijos');
     }
   };
 
@@ -868,6 +849,7 @@ const Chat = () => {
   const renderMessage = (message) => {
     const isOwner = message.sender_id === user?.id;
     const canDelete = myRole === 'owner' || myRole === 'admin' || isOwner;
+    const userReaction = messageReactions[message.id]?.find(r => r.user_id === user?.id);
     
     return (
       <div key={message.id} className={`flex ${isOwner ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -892,9 +874,9 @@ const Chat = () => {
                 setSelectedMessageForEmoji(message.id);
                 setShowEmojiPicker(true);
               }}
-              className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className={`text-xs ${userReaction ? 'text-blue-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
             >
-              😊
+              {userReaction ? userReaction.emoji : '😊'}
             </button>
             {/* Rodyti emoji reakcijas */}
             {messageReactions[message.id]?.length > 0 && (

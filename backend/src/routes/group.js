@@ -306,8 +306,8 @@ router.delete('/:chatId/messages', auth, async (req, res) => {
   }
 });
 
-// Update message reaction
-router.put('/:chatId/messages/:messageId/reaction', auth, async (req, res) => {
+// Add or update message reaction
+router.post('/:chatId/messages/:messageId/reaction', auth, async (req, res) => {
   try {
     const { chatId, messageId } = req.params;
     const { emoji } = req.body;
@@ -323,11 +323,25 @@ router.put('/:chatId/messages/:messageId/reaction', auth, async (req, res) => {
       return res.status(403).json({ message: 'Not a member of this chat' });
     }
 
-    // Update existing reaction
-    await pool.query(
-      'UPDATE message_reactions SET emoji = ? WHERE message_id = ? AND user_id = ?',
-      [emoji, messageId, userId]
+    // Check if user already has a reaction
+    const [existingReaction] = await pool.query(
+      'SELECT * FROM message_reactions WHERE message_id = ? AND user_id = ?',
+      [messageId, userId]
     );
+
+    if (existingReaction.length > 0) {
+      // Update existing reaction
+      await pool.query(
+        'UPDATE message_reactions SET emoji = ? WHERE message_id = ? AND user_id = ?',
+        [emoji, messageId, userId]
+      );
+    } else {
+      // Add new reaction
+      await pool.query(
+        'INSERT INTO message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)',
+        [messageId, userId, emoji]
+      );
+    }
 
     // Get updated reactions
     const [reactions] = await pool.query(
