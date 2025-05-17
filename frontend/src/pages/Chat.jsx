@@ -56,6 +56,7 @@ const Chat = () => {
   const [pinnedMessage, setPinnedMessage] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedMessageForEmoji, setSelectedMessageForEmoji] = useState(null);
+  const [showCreateTypeModal, setShowCreateTypeModal] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -930,7 +931,7 @@ const Chat = () => {
             <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
             <button
               className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow hover:from-blue-600 hover:to-indigo-700 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 font-semibold text-sm md:text-base"
-              onClick={() => setShowNewModal(true)}
+              onClick={() => setShowCreateTypeModal(true)}
               aria-label="Naujas pokalbis"
               title="Naujas pokalbis"
             >
@@ -1113,21 +1114,86 @@ const Chat = () => {
         />
       )}
 
-      {showNewModal && (
+      {showCreateTypeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-8 w-full max-w-xs flex flex-col gap-4 items-center">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Ką norite sukurti?</h3>
+            <button
+              className="w-full py-2 rounded bg-blue-600 text-white font-medium hover:bg-blue-700"
+              onClick={() => { setCreateType('group'); setShowCreateTypeModal(false); setShowNewModal(true); }}
+            >Sukurti grupę</button>
+            <button
+              className="w-full py-2 rounded bg-indigo-600 text-white font-medium hover:bg-indigo-700"
+              onClick={() => { setCreateType('channel'); setShowCreateTypeModal(false); setShowNewModal(true); }}
+            >Sukurti kanalą</button>
+            <button
+              className="w-full py-2 rounded bg-green-600 text-white font-medium hover:bg-green-700"
+              onClick={() => { setCreateType('private'); setShowCreateTypeModal(false); setShowUserSelect(true); }}
+            >Sukurti privatų pokalbį</button>
+            <button
+              className="mt-2 w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600"
+              onClick={() => setShowCreateTypeModal(false)}
+            >Atšaukti</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modalas vartotojo pasirinkimui privačiam pokalbiui */}
+      {showUserSelect && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-8 w-full max-w-xs flex flex-col gap-4 items-center">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Pasirinkite vartotoją</h3>
+            <input
+              type="text"
+              placeholder="Ieškoti vartotojo..."
+              className="w-full mb-2 px-3 py-2 rounded-xl border-none bg-white/40 dark:bg-slate-700/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow text-sm"
+              value={userSearch}
+              onChange={e => setUserSearch(e.target.value)}
+            />
+            <div className="w-full max-h-48 overflow-y-auto space-y-2">
+              {users.filter(u =>
+                (u.first_name + ' ' + u.last_name).toLowerCase().includes(userSearch.toLowerCase())
+              ).map(u => (
+                <button
+                  key={u.id}
+                  className="w-full text-left py-2 px-3 rounded hover:bg-blue-100 dark:hover:bg-blue-800"
+                  onClick={() => handleCreatePrivateChat(u.id)}
+                >
+                  {u.first_name} {u.last_name} ({u.email})
+                </button>
+              ))}
+              {users.filter(u =>
+                (u.first_name + ' ' + u.last_name).toLowerCase().includes(userSearch.toLowerCase())
+              ).length === 0 && (
+                <div className="text-gray-400 text-center">Nėra vartotojų</div>
+              )}
+            </div>
+            <button
+              className="mt-2 w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600"
+              onClick={() => setShowUserSelect(false)}
+            >Atšaukti</button>
+          </div>
+        </div>
+      )}
+
+      {showNewModal && createType !== 'private' && (
         <CreateGroupOrChannelModal
+          type={createType}
           onClose={() => setShowNewModal(false)}
           onCreated={() => {
             setShowNewModal(false);
-            // Atnaujinti pokalbių sąrašą, pvz. fetchChats();
+            // Atnaujinti pokalbių sąrašą
+            window.location.reload();
           }}
         />
       )}
 
+      {/* Žinutės įvedimo laukas, prisegimas ir siuntimas */}
       {selectedChat && (
         <form
           onSubmit={sendMessage}
           className="flex items-center gap-2 p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md"
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
+          style={{ position: 'relative' }}
         >
           <input
             type="file"
@@ -1139,8 +1205,8 @@ const Chat = () => {
               }
             }}
           />
-          <label htmlFor="file-upload" className="cursor-pointer p-2 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800">
-            ��
+          <label htmlFor="file-upload" className="cursor-pointer p-2 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800" title="Prisegti failą">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 108.485 8.485l6.364-6.364" /></svg>
           </label>
           <input
             type="text"
@@ -1148,11 +1214,6 @@ const Chat = () => {
             placeholder="Įveskite žinutę..."
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                sendMessage(e);
-              }
-            }}
             inputMode="text"
             autoComplete="on"
           />
