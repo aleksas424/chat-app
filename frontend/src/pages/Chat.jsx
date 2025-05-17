@@ -1298,6 +1298,24 @@ const Chat = () => {
           </div>
         </div>
       )}
+
+      {/* Modalas nario pridėjimui */}
+      {showAddMember && (
+        <AddMemberModal
+          chatId={selectedChat?.id}
+          onClose={() => setShowAddMember(false)}
+          onAdded={() => {
+            setShowAddMember(false);
+            // Atnaujinti narių sąrašą
+            if (selectedChat) {
+              axios.get(`${API_URL}/api/group/${selectedChat.id}/members`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+              }).then(res => setMembers(res.data));
+            }
+          }}
+          existingMembers={members}
+        />
+      )}
     </div>
   );
 };
