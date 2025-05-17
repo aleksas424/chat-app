@@ -1040,68 +1040,66 @@ const Chat = () => {
                 </div>
 
                 {/* Members or Delete Chat Button */}
-                {selectedChat ? (
-                  selectedChat.type === 'private' ? (
-                    <button
-                      onClick={async () => {
-                        if (window.confirm('Ar tikrai norite ištrinti šį pokalbį?')) {
-                          try {
-                            await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, {
-                              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                            });
-                            setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
-                            setSelectedChat(null);
-                            toast.success('Pokalbis ištrintas');
-                          } catch (error) {
-                            toast.error('Nepavyko ištrinti pokalbio');
-                          }
+                {selectedChat.type === 'private' ? (
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('Ar tikrai norite ištrinti šį pokalbį?')) {
+                        try {
+                          await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, {
+                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                          });
+                          setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
+                          setSelectedChat(null);
+                          toast.success('Pokalbis ištrintas');
+                        } catch (error) {
+                          toast.error('Nepavyko ištrinti pokalbio');
                         }
-                      }}
-                      className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm md:text-base transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      title="Ištrinti pokalbį"
-                      aria-label="Ištrinti pokalbį"
-                    >
-                      🗑️
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setShowMembersModal(true)}
-                      className="p-1.5 md:p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      title="Rodyti narius"
-                      aria-label="Rodyti narius"
-                    >
-                      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                    </button>
-                  )
-                ) : null}
+                      }
+                    }}
+                    className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm md:text-base transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    title="Ištrinti pokalbį"
+                    aria-label="Ištrinti pokalbį"
+                  >
+                    🗑️
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowMembersModal(true)}
+                    className="p-1.5 md:p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    title="Rodyti narius"
+                    aria-label="Rodyti narius"
+                  >
+                    <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </button>
+                )}
               </div>
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md max-h-full min-h-0 overflow-x-hidden">
                 <AnimatePresence>
-                  {messages && messages.length > 0 ? (
-                    messages.map(message => (
-                      <motion.div
-                        key={message.id}
-                        id={`message-${message.id}`}
-                        data-message-id={message.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className={`flex ${
-                          (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
-                        }`}
-                      >
-                        {renderMessage(message)}
-                      </motion.div>
-                    ))
-                  ) : null}
+                  {messages && messages.length > 0
+                    ? messages.map(message => (
+                        <motion.div
+                          key={message.id}
+                          id={`message-${message.id}`}
+                          data-message-id={message.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          className={`flex ${
+                            (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
+                          }`}
+                        >
+                          {renderMessage(message)}
+                        </motion.div>
+                      ))
+                    : null}
                 </AnimatePresence>
               </div>
             </>
-          )}
+          ) : null}
         </div>
       </div>
       
