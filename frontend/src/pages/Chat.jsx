@@ -1081,21 +1081,23 @@ const Chat = () => {
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md max-h-full min-h-0 overflow-x-hidden">
                 <AnimatePresence>
-                  {messages.map(message => (
-                    <motion.div
-                      key={message.id}
-                      id={`message-${message.id}`}
-                      data-message-id={message.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className={`flex ${
-                        (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
-                      {renderMessage(message)}
-                    </motion.div>
-                  ))}
+                  {messages && messages.length > 0 ? (
+                    messages.map(message => (
+                      <motion.div
+                        key={message.id}
+                        id={`message-${message.id}`}
+                        data-message-id={message.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className={`flex ${
+                          (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        {renderMessage(message)}
+                      </motion.div>
+                    ))
+                  ) : null}
                 </AnimatePresence>
               </div>
             </>
