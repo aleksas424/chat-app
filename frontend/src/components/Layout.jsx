@@ -14,16 +14,22 @@ const Layout = () => {
             </h1>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <span style={{color: 'red', fontWeight: 'bold'}}>TESTAS</span>
               <button
-                className="flex items-center gap-2 px-2 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg shadow transition-all duration-150 hover:bg-red-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 title="Atsijungti"
+                aria-label="Atsijungti"
+                tabIndex={0}
+                onClick={() => {
+                  localStorage.removeItem('token');
+                  window.location.href = '/login';
+                }}
               >
                 <svg
                   className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
