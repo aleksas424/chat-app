@@ -861,15 +861,19 @@ const Chat = () => {
 
   const renderMessage = (message) => {
     const isOwner = message.sender_id === user?.id;
-    const canDelete = myRole === 'owner' || myRole === 'admin' || isOwner;
+    // Grupės/kanalo adminas gali trinti bet kurią žinutę, savininkas – visas žinutes, narys – tik savo
+    let canDelete = false;
+    if (myRole === 'owner') canDelete = true;
+    else if (myRole === 'admin') canDelete = true;
+    else if (isOwner) canDelete = true;
     const canEdit = isOwner;
     const userReaction = messageReactions[message.id]?.find(r => r.user_id === user?.id);
     const isEditing = editingMessage === message.id;
     return (
       <div key={message.id} className={`flex ${isOwner ? 'justify-end' : 'justify-start'} mb-4`}>
-        <div className={`max-w-[90vw] md:max-w-[70%] ${isOwner ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-xl p-3 relative shadow-lg break-words`}>
+        <div className={`max-w-[90vw] md:max-w-[70%] ${isOwner ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-2xl p-4 relative shadow-lg break-words transition-all`} style={{minWidth: 120}}>
           {!isOwner && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <div className="text-xs text-gray-400 dark:text-gray-300 mb-2 font-semibold tracking-wide">
               {message.sender_name}
             </div>
           )}
@@ -895,18 +899,18 @@ const Chat = () => {
             </form>
           ) : (
             <>
-              <div>{message.content}</div>
+              <div className="text-base md:text-lg font-medium mb-2 whitespace-pre-line">{message.content}</div>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {canEdit && (
                   <button
                     onClick={() => { setEditingMessage(message.id); setEditContent(message.content); }}
-                    className="text-xs text-blue-200 hover:text-white px-2 py-1 rounded bg-blue-700/40"
+                    className="text-xs text-blue-600 hover:text-white px-2 py-1 rounded bg-blue-100 dark:bg-blue-700/40 hover:bg-blue-500/80 transition"
                   >Redaguoti</button>
                 )}
                 {canDelete && (
                   <button
                     onClick={() => handleDeleteMessage(message.id)}
-                    className="text-xs text-red-300 hover:text-red-600 px-2 py-1 rounded bg-red-700/20"
+                    className="text-xs text-red-600 hover:text-white px-2 py-1 rounded bg-red-100 dark:bg-red-700/30 hover:bg-red-500/80 transition"
                   >Ištrinti</button>
                 )}
                 <button
@@ -914,8 +918,9 @@ const Chat = () => {
                     setSelectedMessageForEmoji(message.id);
                     setShowEmojiPicker(true);
                   }}
-                  className={`text-xs px-2 py-1 rounded ${userReaction ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200'} hover:bg-blue-100 dark:hover:bg-blue-700`}
+                  className={`text-xs px-2 py-1 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-700 transition ${userReaction ? 'ring-2 ring-blue-400' : ''}`}
                   title="Pridėti reakciją"
+                  style={{fontSize: '1.2em'}}
                 >{userReaction ? userReaction.emoji : '😊'}</button>
                 {/* Rodyti emoji reakcijas */}
                 {messageReactions[message.id]?.length > 0 && (
