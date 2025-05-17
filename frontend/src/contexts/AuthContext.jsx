@@ -87,14 +87,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const sendLoginCode = async (email) => {
+  const sendLoginCode = async (email, password) => {
     try {
       const response = await fetch(`${API_URL}/api/auth/send-login-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();

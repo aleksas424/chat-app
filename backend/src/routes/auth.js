@@ -111,7 +111,7 @@ router.post('/verify', async (req, res) => {
 // Send login verification code
 router.post('/send-login-code', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, password } = req.body;
 
     // Check if user exists
     const [users] = await pool.query(
@@ -120,7 +120,14 @@ router.post('/send-login-code', async (req, res) => {
     );
 
     if (users.length === 0) {
-      return res.status(400).json({ message: 'Vartotojas su tokiu el. paštu nerastas' });
+      return res.status(400).json({ message: 'Neteisingas el. paštas arba slaptažodis' });
+    }
+
+    const user = users[0];
+    const bcrypt = require('bcryptjs');
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(400).json({ message: 'Neteisingas el. paštas arba slaptažodis' });
     }
 
     // Send verification code

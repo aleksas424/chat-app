@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 
 const Login = () => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
@@ -16,7 +17,7 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
 
-    const result = await sendLoginCode(email);
+    const result = await sendLoginCode(email, password);
     setLoading(false);
 
     if (result.success) {
@@ -108,7 +109,7 @@ const Login = () => {
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">
-                Email address
+                El. pašto adresas
               </label>
               <input
                 id="email"
@@ -120,6 +121,22 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
                 placeholder="El. pašto adresas"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Slaptažodis
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm dark:bg-gray-800"
+                placeholder="Slaptažodis"
               />
             </div>
           </div>
