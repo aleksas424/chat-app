@@ -1220,7 +1220,7 @@ const Chat = () => {
         />
       )}
 
-      {/* Modalas grupės/kanalo nariams su rolėmis */}
+      {/* Modalas grupės/kanalo nariams su rolėmis ir valdymu */}
       {showMembersModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 w-full max-w-md flex flex-col gap-4">
@@ -1230,21 +1230,71 @@ const Chat = () => {
                 <div className="text-gray-400 text-center py-4">Nėra narių</div>
               )}
               {members.map(m => (
-                <div key={m.id} className="flex items-center justify-between py-2 px-1">
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">{m.first_name} {m.last_name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{m.email}</div>
+                <div key={m.id} className="flex items-center justify-between py-2 px-1 gap-2">
+                  <div className="font-medium text-gray-900 dark:text-white">{m.first_name} {m.last_name}</div>
+                  <div className="flex items-center gap-2">
+                    {/* Rodyti rolės keitimą ir šalinimą tik jei esi savininkas ir ne pats */}
+                    {myRole === 'owner' && m.id !== user.id && (
+                      <>
+                        <select
+                          className="rounded px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                          value={m.role}
+                          onChange={e => handleChangeRole(m.id, e.target.value)}
+                        >
+                          <option value="admin">Administratorius</option>
+                          <option value="member">Narys</option>
+                        </select>
+                        <button
+                          className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded border border-red-200 dark:border-red-500"
+                          onClick={() => handleRemoveMember(m.id)}
+                        >Pašalinti</button>
+                      </>
+                    )}
+                    {/* Rodyti rolę */}
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${m.role === 'owner' ? 'bg-yellow-200 text-yellow-800' : m.role === 'admin' ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}>
+                      {m.role === 'owner' ? 'Savininkas' : m.role === 'admin' ? 'Administratorius' : 'Narys'}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs font-semibold ${m.role === 'owner' ? 'bg-yellow-200 text-yellow-800' : m.role === 'admin' ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}>
-                    {m.role === 'owner' ? 'Savininkas' : m.role === 'admin' ? 'Administratorius' : 'Narys'}
-                  </span>
                 </div>
               ))}
             </div>
-            <button
-              className="mt-2 w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600"
-              onClick={() => setShowMembersModal(false)}
-            >Uždaryti</button>
+            <div className="flex flex-col gap-2 mt-2">
+              {/* Pridėti narį tik savininkui */}
+              {myRole === 'owner' && (
+                <button
+                  className="w-full py-2 rounded bg-green-600 text-white font-medium hover:bg-green-700"
+                  onClick={() => { setShowAddMember(true); setShowMembersModal(false); }}
+                >Pridėti narį</button>
+              )}
+              {/* Ištrinti grupę/kanalą tik savininkui */}
+              {myRole === 'owner' && (
+                <button
+                  className="w-full py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700"
+                  onClick={async () => {
+                    if (window.confirm('Ar tikrai norite ištrinti šią grupę/kanalą?')) {
+                      await handleDeleteChat();
+                      setShowMembersModal(false);
+                    }
+                  }}
+                >Ištrinti grupę/kanalą</button>
+              )}
+              {/* Palikti grupę/kanalą adminui ar nariui */}
+              {myRole !== 'owner' && (
+                <button
+                  className="w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600"
+                  onClick={async () => {
+                    if (window.confirm('Ar tikrai norite palikti šią grupę/kanalą?')) {
+                      await handleLeaveChat();
+                      setShowMembersModal(false);
+                    }
+                  }}
+                >Palikti grupę/kanalą</button>
+              )}
+              <button
+                className="w-full py-2 rounded bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 font-medium hover:bg-blue-300 dark:hover:bg-blue-700"
+                onClick={() => setShowMembersModal(false)}
+              >Uždaryti</button>
+            </div>
           </div>
         </div>
       )}
