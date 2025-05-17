@@ -23,11 +23,12 @@ const Layout = () => {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Pokalbių sistema
             </h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <ThemeToggle />
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                className="flex items-center gap-2 px-2 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                title="Atsijungti"
               >
                 <svg
                   className="w-5 h-5"
