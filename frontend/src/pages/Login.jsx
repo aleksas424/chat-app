@@ -158,6 +158,13 @@ const Login = () => {
             >
               Neturite paskyros? Registruokitės
             </Link>
+            <br />
+            <Link
+              to="/forgot-password"
+              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+            >
+              Pamiršai slaptažodį?
+            </Link>
           </div>
         </form>
       </motion.div>

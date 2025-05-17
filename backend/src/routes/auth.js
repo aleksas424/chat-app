@@ -228,4 +228,50 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
+// Pamiršau slaptažodį: siunčia kodą
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (users.length === 0) {
+      return res.status(400).json({ message: 'Vartotojas su tokiu el. paštu nerastas' });
+    }
+    const verificationCode = await sendVerificationEmail(email);
+    verificationCodes.set(email, {
+      code: verificationCode,
+      timestamp: Date.now()
+    });
+    res.status(200).json({ message: 'Atstatymo kodas išsiųstas į jūsų el. paštą' });
+  } catch (error) {
+    console.error('Error sending forgot password code:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Atstatyti slaptažodį: tikrina kodą ir keičia slaptažodį
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    const userData = verificationCodes.get(email);
+    if (!userData) {
+      return res.status(400).json({ message: 'Neteisingas el. paštas arba kodas' });
+    }
+    if (userData.code !== code) {
+      return res.status(400).json({ message: 'Neteisingas kodas' });
+    }
+    if (Date.now() - userData.timestamp > 15 * 60 * 1000) {
+      verificationCodes.delete(email);
+      return res.status(400).json({ message: 'Kodas nebegalioja' });
+    }
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, email]);
+    verificationCodes.delete(email);
+    res.status(200).json({ message: 'Slaptažodis sėkmingai atnaujintas' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router; 

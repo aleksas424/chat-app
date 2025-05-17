@@ -165,8 +165,44 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
+  const forgotPassword = async (email) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        return { success: true };
+      } else {
+        return { success: false, error: data.message || 'Nepavyko išsiųsti kodo' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Tinklo klaida' };
+    }
+  };
+
+  const resetPassword = async (email, code, newPassword) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code, newPassword }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        return { success: true };
+      } else {
+        return { success: false, error: data.message || 'Nepavyko atnaujinti slaptažodžio' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Tinklo klaida' };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, verifyEmail, sendLoginCode, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, verifyEmail, sendLoginCode, logout, loading, forgotPassword, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
