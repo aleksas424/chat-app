@@ -862,51 +862,79 @@ const Chat = () => {
   const renderMessage = (message) => {
     const isOwner = message.sender_id === user?.id;
     const canDelete = myRole === 'owner' || myRole === 'admin' || isOwner;
+    const canEdit = isOwner;
     const userReaction = messageReactions[message.id]?.find(r => r.user_id === user?.id);
-    
+    const isEditing = editingMessage === message.id;
     return (
       <div key={message.id} className={`flex ${isOwner ? 'justify-end' : 'justify-start'} mb-4`}>
-        <div className={`max-w-[70%] ${isOwner ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-lg p-3`}>
+        <div className={`max-w-[90vw] md:max-w-[70%] ${isOwner ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-xl p-3 relative shadow-lg break-words`}>
           {!isOwner && (
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
               {message.sender_name}
             </div>
           )}
-          <div className="break-words">{message.content}</div>
-          <div className="flex items-center gap-2 mt-2">
-            {canDelete && (
-              <button
-                onClick={() => handleDeleteMessage(message.id)}
-                className="text-xs text-red-500 hover:text-red-700"
-              >
-                Ištrinti
-              </button>
-            )}
-            <button
-              onClick={() => {
-                setSelectedMessageForEmoji(message.id);
-                setShowEmojiPicker(true);
+          {isEditing ? (
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                handleEditMessage(message.id, editContent);
               }}
-              className={`text-xs ${userReaction ? 'text-blue-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+              className="flex flex-col gap-2"
             >
-              {userReaction ? userReaction.emoji : '😊'}
-            </button>
-            {/* Rodyti emoji reakcijas */}
-            {messageReactions[message.id]?.length > 0 && (
-              <div className="flex gap-1">
-                {Object.entries(
-                  messageReactions[message.id].reduce((acc, reaction) => {
-                    acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
-                    return acc;
-                  }, {})
-                ).map(([emoji, count]) => (
-                  <span key={emoji} className="text-sm">
-                    {emoji} {count > 1 ? count : ''}
-                  </span>
-                ))}
+              <input
+                type="text"
+                className="p-2 rounded border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                autoFocus
+              />
+              <div className="flex gap-2 mt-1">
+                <button type="submit" className="px-3 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700">Išsaugoti</button>
+                <button type="button" className="px-3 py-1 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-semibold hover:bg-gray-400 dark:hover:bg-gray-600" onClick={() => { setEditingMessage(null); setEditContent(''); }}>Atšaukti</button>
               </div>
-            )}
-          </div>
+            </form>
+          ) : (
+            <>
+              <div>{message.content}</div>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {canEdit && (
+                  <button
+                    onClick={() => { setEditingMessage(message.id); setEditContent(message.content); }}
+                    className="text-xs text-blue-200 hover:text-white px-2 py-1 rounded bg-blue-700/40"
+                  >Redaguoti</button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={() => handleDeleteMessage(message.id)}
+                    className="text-xs text-red-300 hover:text-red-600 px-2 py-1 rounded bg-red-700/20"
+                  >Ištrinti</button>
+                )}
+                <button
+                  onClick={() => {
+                    setSelectedMessageForEmoji(message.id);
+                    setShowEmojiPicker(true);
+                  }}
+                  className={`text-xs px-2 py-1 rounded ${userReaction ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200'} hover:bg-blue-100 dark:hover:bg-blue-700`}
+                  title="Pridėti reakciją"
+                >{userReaction ? userReaction.emoji : '😊'}</button>
+                {/* Rodyti emoji reakcijas */}
+                {messageReactions[message.id]?.length > 0 && (
+                  <div className="flex gap-1 ml-2">
+                    {Object.entries(
+                      messageReactions[message.id].reduce((acc, reaction) => {
+                        acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
+                        return acc;
+                      }, {})
+                    ).map(([emoji, count]) => (
+                      <span key={emoji} className="text-sm">
+                        {emoji} {count > 1 ? count : ''}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
