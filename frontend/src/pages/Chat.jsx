@@ -465,8 +465,12 @@ const Chat = () => {
   };
 
   const handleSearch = async (query) => {
-    if (!query.trim() || !selectedChat) return;
-    
+    if (!selectedChat) return;
+    if (!query.trim()) {
+      setSearchQuery('');
+      setSearchResults([]);
+      return;
+    }
     setIsSearching(true);
     try {
       const response = await axios.get(
@@ -475,7 +479,7 @@ const Chat = () => {
       );
       setSearchResults(response.data);
     } catch (error) {
-      toast.error('Nepavyko ieškoti žinutžių');
+      toast.error('Nepavyko ieškoti žinučių');
     } finally {
       setIsSearching(false);
     }
