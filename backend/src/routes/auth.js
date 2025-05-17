@@ -108,16 +108,10 @@ router.post('/verify', async (req, res) => {
   }
 });
 
-// Login user
-router.post('/login', async (req, res) => {
+// Send login verification code
+router.post('/send-login-code', async (req, res) => {
   try {
-    console.log('Login request received:', req.body);
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      console.log('Missing email or password');
-      return res.status(400).json({ message: 'Email and password are required' });
-    }
+    const { email } = req.body;
 
     // Check if user exists
     const [users] = await pool.query(
@@ -125,26 +119,61 @@ router.post('/login', async (req, res) => {
       [email]
     );
 
-    console.log('User found:', users.length > 0);
+    if (users.length === 0) {
+      return res.status(400).json({ message: 'Vartotojas su tokiu el. paštu nerastas' });
+    }
+
+    // Send verification code
+    const verificationCode = await sendVerificationEmail(email);
+    
+    // Store verification code temporarily
+    verificationCodes.set(email, {
+      code: verificationCode,
+      timestamp: Date.now()
+    });
+
+    res.status(200).json({ message: 'Verifikacijos kodas išsiųstas į jūsų email' });
+  } catch (error) {
+    console.error('Error sending login code:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Login with verification code
+router.post('/login', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    // Check if user exists
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
 
     if (users.length === 0) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Vartotojas su tokiu el. paštu nerastas' });
     }
 
     const user = users[0];
+    const userData = verificationCodes.get(email);
 
-    // Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match:', isMatch);
-
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    if (!userData) {
+      return res.status(400).json({ message: 'Neteisingas email arba kodas' });
     }
 
-    if (!process.env.JWT_SECRET) {
-      console.error('JWT_SECRET is not set');
-      return res.status(500).json({ message: 'Server configuration error' });
+    // Check if code is correct
+    if (userData.code !== code) {
+      return res.status(400).json({ message: 'Neteisingas verifikacijos kodas' });
     }
+
+    // Check if code is still valid (15 minutes)
+    if (Date.now() - userData.timestamp > 15 * 60 * 1000) {
+      verificationCodes.delete(email);
+      return res.status(400).json({ message: 'Verifikacijos kodas nebegalioja' });
+    }
+
+    // Clear verification data
+    verificationCodes.delete(email);
 
     // Generate JWT token
     const token = jwt.sign(

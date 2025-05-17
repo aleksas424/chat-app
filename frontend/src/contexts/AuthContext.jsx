@@ -63,14 +63,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, code) => {
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, code }),
       });
 
       const data = await response.json();
@@ -81,6 +81,28 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       } else {
         return { success: false, error: data.message || 'Prisijungimas nepavyko' };
+      }
+    } catch (error) {
+      return { success: false, error: 'Tinklo klaida' };
+    }
+  };
+
+  const sendLoginCode = async (email) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/send-login-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return { success: true };
+      } else {
+        return { success: false, error: data.message || 'Nepavyko išsiųsti kodo' };
       }
     } catch (error) {
       return { success: false, error: 'Tinklo klaida' };
@@ -144,7 +166,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, verifyEmail, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, verifyEmail, sendLoginCode, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
