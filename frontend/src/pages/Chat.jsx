@@ -1024,7 +1024,7 @@ const Chat = () => {
         {selectedChat ? (
           <div className="flex flex-col h-full min-h-0">
             {/* Chat Header */}
-            <div className="p-3 md:p-4 border-b border-slate-700/20 bg-white/30 dark:bg-slate-800/60 backdrop-blur-md flex items-center justify-between overflow-x-hidden">
+            <div className="sticky top-0 z-20 p-3 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between overflow-x-hidden" style={{backdropFilter: 'blur(8px)'}}>
               <div className="flex items-center gap-2 md:gap-3">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
