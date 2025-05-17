@@ -1112,6 +1112,59 @@ const Chat = () => {
           }}
         />
       )}
+
+      {showNewModal && (
+        <CreateGroupOrChannelModal
+          onClose={() => setShowNewModal(false)}
+          onCreated={() => {
+            setShowNewModal(false);
+            // Atnaujinti pokalbių sąrašą, pvz. fetchChats();
+          }}
+        />
+      )}
+
+      {selectedChat && (
+        <form
+          onSubmit={sendMessage}
+          className="flex items-center gap-2 p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md"
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
+        >
+          <input
+            type="file"
+            style={{ display: 'none' }}
+            id="file-upload"
+            onChange={e => {
+              if (e.target.files && e.target.files[0]) {
+                handleFileUpload(e.target.files[0]);
+              }
+            }}
+          />
+          <label htmlFor="file-upload" className="cursor-pointer p-2 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800">
+            ��
+          </label>
+          <input
+            type="text"
+            className="flex-1 p-2 rounded border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Įveskite žinutę..."
+            value={newMessage}
+            onChange={e => setNewMessage(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                sendMessage(e);
+              }
+            }}
+            inputMode="text"
+            autoComplete="on"
+          />
+          <button
+            type="submit"
+            className="p-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
+            disabled={!newMessage.trim()}
+          >
+            Siųsti
+          </button>
+        </form>
+      )}
     </div>
   );
 };

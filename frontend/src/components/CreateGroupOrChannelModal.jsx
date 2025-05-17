@@ -26,9 +26,9 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
     fetchUsers();
   }, []);
 
-  const toggleUser = (id) => {
-    setSelectedUsers(sel => sel.includes(id) ? sel.filter(i => i !== id) : [...sel, id]);
-    if (!selectedUsers.includes(id)) setAdmins(admins => admins.filter(a => a !== id));
+  const toggleUser = (user) => {
+    setSelectedUsers(sel => sel.some(u => u.id === user.id) ? sel.filter(i => i.id !== user.id) : [...sel, user]);
+    if (!selectedUsers.some(u => u.id === user.id)) setAdmins(admins => admins.filter(a => a !== user.id));
   };
   const toggleAdmin = (id) => {
     setAdmins(adm => adm.includes(id) ? adm.filter(i => i !== id) : [...adm, id]);
@@ -101,7 +101,7 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
             <div
               key={u.id}
               className="flex items-center gap-2 px-2 py-1 hover:bg-blue-100 dark:hover:bg-slate-700 rounded cursor-pointer"
-              onClick={() => setSelectedUsers([...selectedUsers, u])}
+              onClick={() => toggleUser(u)}
               tabIndex={0}
               aria-label={`Pridėti narį ${(u.first_name + ' ' + u.last_name)}`}
             >
@@ -152,4 +152,4 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
   );
 };
 
-export default CreateGroupOrChannelModal; 
+export default CreateGroupOrChannelModal;
