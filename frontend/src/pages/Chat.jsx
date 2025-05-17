@@ -954,7 +954,7 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex h-screen min-h-screen bg-gray-100 dark:bg-slate-900">
+    <div className="flex h-screen bg-gray-100 dark:bg-slate-900">
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen || chats.length === 0 ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       {/* Sidebar */}
@@ -1107,7 +1107,7 @@ const Chat = () => {
             </div>
             {/* Messages + input */}
             <div className="flex flex-col flex-1 h-full">
-              <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md max-h-full">
+              <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md">
                 <AnimatePresence>
                   {messages && messages.length > 0
                     ? messages.map(message => (
