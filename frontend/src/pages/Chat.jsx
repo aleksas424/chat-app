@@ -954,12 +954,12 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-slate-900">
+    <div className="flex h-screen min-h-screen bg-gray-100 dark:bg-slate-900">
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen || chats.length === 0 ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       {/* Sidebar */}
-      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block h-full min-h-0 overflow-x-hidden`}>
-        <div className="p-4 md:p-6 flex flex-col h-full min-h-0 overflow-x-hidden">
+      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block h-full`}>
+        <div className="p-4 md:p-6 flex flex-col h-full">
           <div className="flex justify-between items-center mb-4 md:mb-6">
             <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
             <button
@@ -1020,9 +1020,9 @@ const Chat = () => {
         </div>
       </div>
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col h-full min-h-0">
+      <div className="flex-1 flex flex-col h-full">
         {selectedChat ? (
-          <div className="flex flex-col h-full min-h-0">
+          <div className="flex flex-col h-full">
             {/* Chat Header */}
             <div className="sticky top-0 z-20 p-3 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between overflow-x-hidden" style={{backdropFilter: 'blur(8px)'}}>
               <div className="flex items-center gap-2 md:gap-3">
@@ -1106,8 +1106,8 @@ const Chat = () => {
               )}
             </div>
             {/* Messages + input */}
-            <div className="flex flex-col flex-1 min-h-0">
-              <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md max-h-full min-h-0">
+            <div className="flex flex-col flex-1 h-full">
+              <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md max-h-full">
                 <AnimatePresence>
                   {messages && messages.length > 0
                     ? messages.map(message => (
