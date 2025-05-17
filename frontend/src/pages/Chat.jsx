@@ -1040,7 +1040,7 @@ const Chat = () => {
                 </div>
 
                 {/* Members or Delete Chat Button */}
-                {selectedChat && (
+                {selectedChat ? (
                   selectedChat.type === 'private' ? (
                     <button
                       onClick={async () => {
@@ -1075,7 +1075,7 @@ const Chat = () => {
                       </svg>
                     </button>
                   )
-                )}
+                ) : null}
               </div>
 
               {/* Messages */}
