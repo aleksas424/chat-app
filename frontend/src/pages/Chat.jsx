@@ -1219,6 +1219,35 @@ const Chat = () => {
           }}
         />
       )}
+
+      {/* Modalas grupės/kanalo nariams su rolėmis */}
+      {showMembersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 w-full max-w-md flex flex-col gap-4">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Nariai</h3>
+            <div className="overflow-y-auto max-h-80 divide-y divide-gray-200 dark:divide-gray-700">
+              {members.length === 0 && (
+                <div className="text-gray-400 text-center py-4">Nėra narių</div>
+              )}
+              {members.map(m => (
+                <div key={m.id} className="flex items-center justify-between py-2 px-1">
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">{m.first_name} {m.last_name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{m.email}</div>
+                  </div>
+                  <span className={`px-2 py-1 rounded text-xs font-semibold ${m.role === 'owner' ? 'bg-yellow-200 text-yellow-800' : m.role === 'admin' ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}>
+                    {m.role === 'owner' ? 'Savininkas' : m.role === 'admin' ? 'Administratorius' : 'Narys'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button
+              className="mt-2 w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600"
+              onClick={() => setShowMembersModal(false)}
+            >Uždaryti</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
