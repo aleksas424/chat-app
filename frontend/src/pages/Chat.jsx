@@ -1052,16 +1052,23 @@ const Chat = () => {
                 </div>
               </div>
               {/* Search Bar */}
-              <div className="relative">
+              <form
+                className="relative flex items-center"
+                onSubmit={e => {
+                  e.preventDefault();
+                  handleSearch(searchQuery);
+                }}
+              >
+                <input
+                  type="text"
+                  className="rounded-lg px-3 py-1 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm md:text-base"
+                  placeholder="Ieškoti žinutės..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
                 <button
-                  onClick={() => {
-                    const query = prompt('Ieškoti žinutės:');
-                    if (query !== null) {
-                      setSearchQuery(query);
-                      handleSearch(query);
-                    }
-                  }}
-                  className="p-2 rounded-lg bg-white/60 dark:bg-slate-700/80 hover:bg-blue-100 dark:hover:bg-blue-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 active:scale-95"
+                  type="submit"
+                  className="ml-2 p-2 rounded-lg bg-white/60 dark:bg-slate-700/80 hover:bg-blue-100 dark:hover:bg-blue-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 active:scale-95"
                   title="Ieškoti žinutės"
                   aria-label="Ieškoti žinutės"
                 >
@@ -1069,7 +1076,7 @@ const Chat = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
                   </svg>
                 </button>
-              </div>
+              </form>
               {selectedChat.type === 'private' ? (
                 <button
                   onClick={async () => {
@@ -1109,8 +1116,12 @@ const Chat = () => {
             <div className="flex flex-col flex-1 h-full">
               <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md">
                 <AnimatePresence>
-                  {messages && messages.length > 0
-                    ? messages.map(message => (
+                  {(searchQuery && searchResults.length > 0
+                    ? searchResults
+                    : !searchQuery && messages.length > 0
+                      ? messages
+                      : []
+                  ).map(message => (
                     <motion.div
                       key={message.id}
                       id={`message-${message.id}`}
@@ -1124,8 +1135,10 @@ const Chat = () => {
                     >
                       {renderMessage(message)}
                     </motion.div>
-                      ))
-                    : null}
+                  ))}
+                  {(searchQuery && searchResults.length === 0) && (
+                    <div className="text-center text-gray-400 py-8">Nerasta žinučių pagal paiešką</div>
+                  )}
                 </AnimatePresence>
               </div>
               {/* Žinutės įvedimo laukas, prisegimas ir siuntimas */}
