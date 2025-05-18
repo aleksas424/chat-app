@@ -962,7 +962,7 @@ const Chat = () => {
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen || chats.length === 0 ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       {/* Sidebar */}
-      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block h-full`}>
+      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block h-full overflow-hidden`}>
         <div className="p-4 md:p-6 flex flex-col h-full">
           <div className="flex justify-between items-center mb-4 md:mb-6">
             <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
@@ -982,44 +982,46 @@ const Chat = () => {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <div className="space-y-2 md:space-y-3 flex-1 min-h-0">
+          <div className="space-y-2 md:space-y-3 flex-1 min-h-0 overflow-hidden">
             {filteredChats.length === 0 && (
               <div className="text-slate-400 text-center py-4 md:py-8 text-sm md:text-base">No chats found</div>
             )}
-            {filteredChats.map(chat => (
-              <motion.div
-                key={chat.id}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-2xl cursor-pointer transition-colors duration-100 shadow-md ${
-                  selectedChat?.id === chat.id
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'
-                    : 'bg-white/30 dark:bg-slate-700/60 hover:bg-blue-500/20 dark:hover:bg-blue-700/40 text-slate-900 dark:text-white'
-                }`}
-                onClick={() => handleSelectChat(chat)}
-              >
-                {/* Avatar */}
-                <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                  {(() => {
-                    const parts = (chat.display_name || '').split(' ');
-                    const first = (parts[0] && parts[0][0]) ? parts[0][0].toUpperCase() : '';
-                    const last = (parts[1] && parts[1][0]) ? parts[1][0].toUpperCase() : '';
-                    return first + last;
-                  })()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1 md:gap-2">
-                    <span className="font-semibold truncate text-sm md:text-base">
-                      {chat.display_name}
-                    </span>
-                    <span className="text-xs text-blue-200">{chat.type}</span>
+            <div className="flex flex-col gap-2 md:gap-3">
+              {filteredChats.map(chat => (
+                <motion.div
+                  key={chat.id}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-2xl cursor-pointer transition-colors duration-100 shadow-md ${
+                    selectedChat?.id === chat.id
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'
+                      : 'bg-white/30 dark:bg-slate-700/60 hover:bg-blue-500/20 dark:hover:bg-blue-700/40 text-slate-900 dark:text-white'
+                  }`}
+                  onClick={() => handleSelectChat(chat)}
+                >
+                  {/* Avatar */}
+                  <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
+                    {(() => {
+                      const parts = (chat.display_name || '').split(' ');
+                      const first = (parts[0] && parts[0][0]) ? parts[0][0].toUpperCase() : '';
+                      const last = (parts[1] && parts[1][0]) ? parts[1][0].toUpperCase() : '';
+                      return first + last;
+                    })()}
                   </div>
-                  <div className="text-xs md:text-sm text-blue-100 truncate">
-                    {chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 md:gap-2">
+                      <span className="font-semibold truncate text-sm md:text-base">
+                        {chat.display_name}
+                      </span>
+                      <span className="text-xs text-blue-200">{chat.type}</span>
+                    </div>
+                    <div className="text-xs md:text-sm text-blue-100 truncate">
+                      {chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
