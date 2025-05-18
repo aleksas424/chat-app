@@ -1150,7 +1150,7 @@ const Chat = () => {
               {/* Žinutės įvedimo laukas, prisegimas ir siuntimas */}
               <form
                 onSubmit={sendMessage}
-                className="flex items-center gap-2 p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full"
+                className="flex items-center gap-2 p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full sticky bottom-0 z-10"
                 style={{}}
               >
                 <input
