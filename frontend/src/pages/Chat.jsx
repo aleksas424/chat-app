@@ -958,15 +958,15 @@ const Chat = () => {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-gray-100 dark:bg-slate-900">
+    <div className="w-screen h-screen max-w-full max-h-screen overflow-x-hidden flex flex-col bg-gray-100 dark:bg-slate-900">
       {/* Header */}
       <div className="flex-none w-full bg-gray-900 dark:bg-slate-900 text-white px-6 py-4 flex items-center justify-between z-30" style={{ minHeight: '56px' }}>
         <span className="text-2xl font-bold">Pokalbių sistema</span>
         {/* ... čia gali būti theme switch, logout ir pan. ... */}
       </div>
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 w-full max-w-full">
         {/* Sidebar */}
-        <div className={`flex-none w-full max-w-xs bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl h-full flex flex-col z-20`}>
+        <div className="flex-none w-72 max-w-xs bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl h-full flex flex-col z-20">
           <div className="p-4 md:p-6 flex flex-col h-full">
             <div className="flex justify-between items-center mb-4 md:mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
@@ -1030,9 +1030,9 @@ const Chat = () => {
           </div>
         </div>
         {/* Main chat area */}
-        <div className="flex-1 flex flex-col h-full min-h-0">
-          {/* Chat Header (sticky) */}
-          <div className="flex-none sticky top-0 z-10 p-3 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between" style={{backdropFilter: 'blur(8px)'}}>
+        <div className="flex-1 flex flex-col h-full min-h-0 max-w-full">
+          {/* Chat Header */}
+          <div className="flex-none p-3 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between w-full max-w-full" style={{backdropFilter: 'blur(8px)'}}>
             <div className="flex items-center gap-2 md:gap-3">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -1121,8 +1121,8 @@ const Chat = () => {
             )}
           </div>
           {/* Messages + input */}
-          <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md">
+          <div className="flex flex-col flex-1 min-h-0 max-w-full">
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full">
               <AnimatePresence>
                 {(searchQuery && searchResults.length > 0
                   ? searchResults
@@ -1151,7 +1151,7 @@ const Chat = () => {
             </div>
             <form
               onSubmit={sendMessage}
-              className="flex items-center gap-2 p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full"
+              className="flex items-center gap-2 p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full"
             >
               <input
                 type="file"
