@@ -959,11 +959,6 @@ const Chat = () => {
 
   return (
     <div className="w-screen h-screen max-w-full max-h-screen overflow-x-hidden flex flex-col bg-gray-100 dark:bg-slate-900">
-      {/* Header */}
-      <div className="flex-none w-full bg-gray-900 dark:bg-slate-900 text-white px-4 py-3 flex items-center justify-between z-30" style={{ minHeight: '48px' }}>
-        <span className="text-lg md:text-2xl font-bold">Pokalbių sistema</span>
-        {/* ... čia gali būti theme switch, logout ir pan. ... */}
-      </div>
       <div className="flex flex-1 min-h-0 w-full max-w-full">
         {/* Sidebar (hidden on mobile, open with button) */}
         <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
@@ -1036,7 +1031,7 @@ const Chat = () => {
           <div className="flex-none p-2 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between w-full max-w-full" style={{backdropFilter: 'blur(8px)'}}>
             {/* Burger menu button on mobile */}
             <button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setSidebarOpen(v => !v)}
               className="md:hidden p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 mr-2"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
