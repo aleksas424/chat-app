@@ -960,13 +960,14 @@ const Chat = () => {
   return (
     <div className="w-screen h-screen max-w-full max-h-screen overflow-x-hidden flex flex-col bg-gray-100 dark:bg-slate-900">
       {/* Header */}
-      <div className="flex-none w-full bg-gray-900 dark:bg-slate-900 text-white px-6 py-4 flex items-center justify-between z-30" style={{ minHeight: '56px' }}>
-        <span className="text-2xl font-bold">Pokalbių sistema</span>
+      <div className="flex-none w-full bg-gray-900 dark:bg-slate-900 text-white px-4 py-3 flex items-center justify-between z-30" style={{ minHeight: '48px' }}>
+        <span className="text-lg md:text-2xl font-bold">Pokalbių sistema</span>
         {/* ... čia gali būti theme switch, logout ir pan. ... */}
       </div>
       <div className="flex flex-1 min-h-0 w-full max-w-full">
-        {/* Sidebar */}
-        <div className="flex-none w-72 max-w-xs bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl h-full flex flex-col z-20">
+        {/* Sidebar (hidden on mobile, open with button) */}
+        <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
+        <div className={`fixed z-50 inset-y-0 left-0 w-4/5 max-w-xs bg-slate-800/90 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-[-100%]'} md:w-72 md:max-w-xs md:block h-full flex flex-col z-20`}>
           <div className="p-4 md:p-6 flex flex-col h-full">
             <div className="flex justify-between items-center mb-4 md:mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
@@ -1032,16 +1033,17 @@ const Chat = () => {
         {/* Main chat area */}
         <div className="flex-1 flex flex-col h-full min-h-0 max-w-full">
           {/* Chat Header */}
-          <div className="flex-none p-3 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between w-full max-w-full" style={{backdropFilter: 'blur(8px)'}}>
+          <div className="flex-none p-2 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between w-full max-w-full" style={{backdropFilter: 'blur(8px)'}}>
+            {/* Burger menu button on mobile */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 mr-2"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             <div className="flex items-center gap-2 md:gap-3">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
               <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
                 {(() => {
                   const parts = (selectedChat.display_name || '').split(' ');
@@ -1122,7 +1124,7 @@ const Chat = () => {
           </div>
           {/* Messages + input */}
           <div className="flex flex-col flex-1 min-h-0 max-w-full">
-            <div className="flex-1 min-h-0 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full">
+            <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-4 space-y-2 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-2xl md:rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full">
               <AnimatePresence>
                 {(searchQuery && searchResults.length > 0
                   ? searchResults
@@ -1151,7 +1153,7 @@ const Chat = () => {
             </div>
             <form
               onSubmit={sendMessage}
-              className="flex items-center gap-2 p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full"
+              className="flex items-center gap-2 p-2 md:p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full"
             >
               <input
                 type="file"
