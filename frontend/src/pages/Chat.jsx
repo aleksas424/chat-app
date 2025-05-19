@@ -57,6 +57,7 @@ const Chat = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedMessageForEmoji, setSelectedMessageForEmoji] = useState(null);
   const [showCreateTypeModal, setShowCreateTypeModal] = useState(false);
+  const messageInputRef = useRef();
 
   useEffect(() => {
     if (!user) return;
@@ -142,12 +143,13 @@ const Chat = () => {
   }, [user]);
 
   useEffect(() => {
-    // Fetch chats and join rooms when chats change
+    let cancelled = false;
     const fetchChats = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/chat`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
+        if (cancelled) return;
         const chatsWithLast = await Promise.all(response.data.map(async (chat) => {
           try {
             const msgRes = await axios.get(`${API_URL}/api/chat/${chat.id}/messages`, {
@@ -159,6 +161,7 @@ const Chat = () => {
             return { ...chat, lastMessage: null };
           }
         }));
+        if (cancelled) return;
         setChats(chatsWithLast);
         if (chatsWithLast.length > 0) {
           const stillExists = chatsWithLast.find(chat => chat.id === selectedChat?.id);
@@ -174,12 +177,13 @@ const Chat = () => {
           setSelectedChat(null);
         }
       } catch (error) {
-        toast.error('Nepavyko įkelti pokalbių');
+        if (!cancelled) toast.error('Nepavyko įkelti pokalbių');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchChats();
+    return () => { cancelled = true; };
   }, [selectedChat?.id]);
 
   useEffect(() => {
@@ -949,6 +953,34 @@ const Chat = () => {
     );
   };
 
+  useEffect(() => {
+    if (!selectedChat && window.innerWidth < 768) {
+      setSidebarOpen(true);
+    }
+  }, [selectedChat]);
+
+  useEffect(() => {
+    if (!selectedChat && chats.length > 0 && window.innerWidth >= 768) {
+      setSelectedChat(chats[0]);
+    }
+  }, [selectedChat, chats]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (selectedChat && messageInputRef.current) {
+      messageInputRef.current.focus();
+    }
+  }, [selectedChat]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -968,7 +1000,7 @@ const Chat = () => {
             transform transition-transform duration-200 md:static md:translate-x-0 md:w-72 md:max-w-xs md:block h-full flex flex-col z-20
           `}
         >
-          <div className="p-4 md:p-6 flex flex-col h-full">
+          <div className="p-4 md:p-6 flex flex-col h-full overflow-y-auto">
             <div className="flex justify-between items-center mb-4 md:mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
               <button
@@ -986,12 +1018,16 @@ const Chat = () => {
               className="w-full mb-4 md:mb-6 px-3 py-2 md:px-4 md:py-3 rounded-xl border-none bg-white/40 dark:bg-slate-700/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow text-sm md:text-base"
               value={search}
               onChange={e => setSearch(e.target.value)}
+              aria-label="Ieškoti pokalbių"
             />
-            <div className="space-y-2 md:space-y-3 flex-1 min-h-0 overflow-hidden">
+            <div className="space-y-2 md:space-y-3 flex-1 min-h-0 overflow-y-auto">
               {filteredChats.length === 0 && (
                 <div className="text-slate-400 text-center py-4 md:py-8 text-sm md:text-base">No chats found</div>
               )}
               <div className="flex flex-col gap-2 md:gap-3">
+                {filteredChats.length === 0 && chats.length === 0 && (
+                  <div className="text-center text-gray-400 py-8">No chats available</div>
+                )}
                 {filteredChats.map(chat => (
                   <motion.div
                     key={chat.id}
@@ -1003,6 +1039,9 @@ const Chat = () => {
                         : 'bg-white/30 dark:bg-slate-700/60 hover:bg-blue-500/20 dark:hover:bg-blue-700/40 text-slate-900 dark:text-white'
                     }`}
                     onClick={() => handleSelectChat(chat)}
+                    tabIndex={0}
+                    aria-label={`Pasirinkti pokalbį: ${chat.display_name}`}
+                    title={chat.display_name}
                   >
                     {/* Avatar */}
                     <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
@@ -1015,12 +1054,12 @@ const Chat = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1 md:gap-2">
-                        <span className="font-semibold truncate text-sm md:text-base">
+                        <span className="font-semibold truncate text-sm md:text-base" title={chat.display_name}>
                           {chat.display_name}
                         </span>
                         <span className="text-xs text-blue-200">{chat.type}</span>
                       </div>
-                      <div className="text-xs md:text-sm text-blue-100 truncate">
+                      <div className="text-xs md:text-sm text-blue-100 truncate" title={chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}>
                         {chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}
                       </div>
                     </div>
@@ -1031,161 +1070,178 @@ const Chat = () => {
           </div>
         </div>
         {/* Chat area: Only show on mobile if sidebarOpen is false, always show on desktop */}
-        <div className={`flex-1 flex flex-col h-full min-h-0 max-w-full ${sidebarOpen ? 'hidden' : ''} md:block`}>
-          {/* Chat Header */}
-          <div className="flex-none p-2 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between w-full max-w-full" style={{backdropFilter: 'blur(8px)'}}>
-            {/* Burger menu button on mobile */}
-            <button
-              onClick={() => setSidebarOpen(v => !v)}
-              className="md:hidden p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 mr-2"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                {(() => {
-                  const parts = (selectedChat.display_name || '').split(' ');
-                  const first = (parts[0] && parts[0][0]) ? parts[0][0].toUpperCase() : '';
-                  const last = (parts[1] && parts[1][0]) ? parts[1][0].toUpperCase() : '';
-                  return first + last;
-                })()}
-              </div>
-              <div>
-                <h2 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white">
-                  {selectedChat.display_name}
-                </h2>
-                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
-                  {selectedChat.type}
-                </p>
-              </div>
-            </div>
-            {/* Search Bar */}
-            <form
-              className="relative flex items-center"
-              onSubmit={e => {
-                e.preventDefault();
-                handleSearch(searchQuery);
-              }}
-            >
-              <input
-                type="text"
-                className="rounded-lg px-3 py-1 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm md:text-base"
-                placeholder="Ieškoti žinutės..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-              <button
-                type="submit"
-                className="ml-2 p-2 rounded-lg bg-white/60 dark:bg-slate-700/80 hover:bg-blue-100 dark:hover:bg-blue-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 active:scale-95"
-                title="Ieškoti žinutės"
-                aria-label="Ieškoti žinutės"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
-                </svg>
-              </button>
-            </form>
-            {selectedChat.type === 'private' ? (
-              <button
-                onClick={async () => {
-                  if (window.confirm('Ar tikrai norite ištrinti šį pokalbį?')) {
-                    try {
-                      await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, {
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                      });
-                      setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
-                      setSelectedChat(null);
-                      toast.success('Pokalbis ištrintas');
-                    } catch (error) {
-                      toast.error('Nepavyko ištrinti pokalbio');
-                    }
-                  }
-                }}
-                className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm md:text-base transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                title="Ištrinti pokalbį"
-                aria-label="Ištrinti pokalbį"
-              >
-                🗑️
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowMembersModal(true)}
-                className="p-1.5 md:p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                title="Rodyti narius"
-                aria-label="Rodyti narius"
-              >
-                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </button>
-            )}
-          </div>
-          {/* Messages + input */}
-          <div className="flex flex-col flex-1 min-h-0 max-w-full">
-            <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-4 space-y-2 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-2xl md:rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full">
-              <AnimatePresence>
-                {(searchQuery && searchResults.length > 0
-                  ? searchResults
-                  : !searchQuery && messages.length > 0
-                    ? messages
-                    : []
-                ).map(message => (
-                  <motion.div
-                    key={message.id}
-                    id={`message-${message.id}`}
-                    data-message-id={message.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className={`flex ${
-                      (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
-                    }`}
+        <div className={`flex-1 flex flex-col h-full min-h-0 max-w-full ${sidebarOpen ? 'hidden' : ''} md:block overflow-y-auto`}>
+          {selectedChat ? (
+            <>
+              {/* Chat Header */}
+              <div className="flex-none p-2 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between w-full max-w-full" style={{backdropFilter: 'blur(8px)'}}>
+                {/* Burger menu button on mobile */}
+                <button
+                  onClick={() => setSidebarOpen(v => !v)}
+                  className="md:hidden p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 mr-2"
+                  aria-label="Atidaryti/uždaryti pokalbių sąrašą"
+                  title="Atidaryti/uždaryti pokalbių sąrašą"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
+                    {(() => {
+                      const parts = (selectedChat.display_name || '').split(' ');
+                      const first = (parts[0] && parts[0][0]) ? parts[0][0].toUpperCase() : '';
+                      const last = (parts[1] && parts[1][0]) ? parts[1][0].toUpperCase() : '';
+                      return first + last;
+                    })()}
+                  </div>
+                  <div>
+                    <h2 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white truncate max-w-[120px] md:max-w-xs" title={selectedChat.display_name}>
+                      {selectedChat.display_name}
+                    </h2>
+                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
+                      {selectedChat.type}
+                    </p>
+                  </div>
+                </div>
+                {/* Search Bar */}
+                <form
+                  className="relative flex items-center"
+                  onSubmit={e => {
+                    e.preventDefault();
+                    handleSearch(searchQuery);
+                  }}
+                >
+                  <input
+                    type="text"
+                    className="rounded-lg px-3 py-1 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm md:text-base"
+                    placeholder="Ieškoti žinutės..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    aria-label="Ieškoti žinutės"
+                  />
+                  <button
+                    type="submit"
+                    className="ml-2 p-2 rounded-lg bg-white/60 dark:bg-slate-700/80 hover:bg-blue-100 dark:hover:bg-blue-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 active:scale-95"
+                    title="Ieškoti žinutės"
+                    aria-label="Ieškoti žinutės"
                   >
-                    {renderMessage(message)}
-                  </motion.div>
-                ))}
-                {(searchQuery && searchResults.length === 0) && (
-                  <div className="text-center text-gray-400 py-8">Nerasta žinučių pagal paiešką</div>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+                    </svg>
+                  </button>
+                </form>
+                {selectedChat.type === 'private' ? (
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('Ar tikrai norite ištrinti šį pokalbį?')) {
+                        try {
+                          await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, {
+                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                          });
+                          setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
+                          setSelectedChat(null);
+                          toast.success('Pokalbis ištrintas');
+                        } catch (error) {
+                          toast.error('Nepavyko ištrinti pokalbio');
+                        }
+                      }
+                    }}
+                    className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm md:text-base transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    title="Ištrinti pokalbį"
+                    aria-label="Ištrinti pokalbį"
+                  >
+                    🗑️
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowMembersModal(true)}
+                    className="p-1.5 md:p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    title="Rodyti narius"
+                    aria-label="Rodyti narius"
+                  >
+                    <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </button>
                 )}
-              </AnimatePresence>
+              </div>
+              {/* Messages + input */}
+              <div className="flex flex-col flex-1 min-h-0 max-w-full overflow-y-auto">
+                <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-4 space-y-2 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-2xl md:rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full">
+                  <AnimatePresence>
+                    {(searchQuery && searchResults.length > 0
+                      ? searchResults
+                      : !searchQuery && messages.length > 0
+                        ? messages
+                        : []
+                    ).map(message => (
+                      <motion.div
+                        key={message.id}
+                        id={`message-${message.id}`}
+                        data-message-id={message.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className={`flex ${
+                          (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        {renderMessage(message)}
+                      </motion.div>
+                    ))}
+                    {(searchQuery && searchResults.length === 0) && (
+                      <div className="text-center text-gray-400 py-8">Nerasta žinučių pagal paiešką</div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <form
+                  onSubmit={sendMessage}
+                  className="flex items-center gap-2 p-2 md:p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full"
+                >
+                  <input
+                    type="file"
+                    style={{ display: 'none' }}
+                    id="file-upload"
+                    onChange={e => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleFileUpload(e.target.files[0]);
+                        e.target.value = '';
+                      }
+                    }}
+                    aria-label="Prisegti failą"
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer p-2 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800" title="Prisegti failą" aria-label="Prisegti failą">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 108.485 8.485l6.364-6.364" /></svg>
+                  </label>
+                  <input
+                    type="text"
+                    className="flex-1 p-2 rounded border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="Įveskite žinutę..."
+                    value={newMessage}
+                    onChange={e => setNewMessage(e.target.value)}
+                    inputMode="text"
+                    autoComplete="on"
+                    ref={messageInputRef}
+                    aria-label="Įveskite žinutę"
+                  />
+                  <button
+                    type="submit"
+                    className="p-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    disabled={!newMessage.trim()}
+                    aria-label="Siųsti žinutę"
+                    title="Siųsti žinutę"
+                  >
+                    Siųsti
+                  </button>
+                </form>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-lg">
+              Pasirinkite pokalbį
             </div>
-            <form
-              onSubmit={sendMessage}
-              className="flex items-center gap-2 p-2 md:p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full"
-            >
-              <input
-                type="file"
-                style={{ display: 'none' }}
-                id="file-upload"
-                onChange={e => {
-                  if (e.target.files && e.target.files[0]) {
-                    handleFileUpload(e.target.files[0]);
-                  }
-                }}
-              />
-              <label htmlFor="file-upload" className="cursor-pointer p-2 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800" title="Prisegti failą">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 108.485 8.485l6.364-6.364" /></svg>
-              </label>
-              <input
-                type="text"
-                className="flex-1 p-2 rounded border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="Įveskite žinutę..."
-                value={newMessage}
-                onChange={e => setNewMessage(e.target.value)}
-                inputMode="text"
-                autoComplete="on"
-              />
-              <button
-                type="submit"
-                className="p-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
-                disabled={!newMessage.trim()}
-              >
-                Siųsti
-              </button>
-            </form>
-          </div>
+          )}
         </div>
       </div>
       
