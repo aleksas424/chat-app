@@ -1176,7 +1176,7 @@ const Chat = () => {
                 )}
               </div>
               {/* Messages + input */}
-              <div className="flex flex-col flex-1 min-h-0 max-w-full overflow-y-auto">
+              <div className="flex flex-col flex-1 min-h-0 max-w-full">
                 <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-4 space-y-2 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-2xl md:rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full">
                   <AnimatePresence>
                     {(searchQuery && searchResults.length > 0
@@ -1206,7 +1206,7 @@ const Chat = () => {
                 </div>
                 <form
                   onSubmit={sendMessage}
-                  className="flex items-center gap-2 p-2 md:p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full"
+                  className="flex-none flex items-center gap-2 p-2 md:p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full"
                 >
                   <input
                     type="file"
