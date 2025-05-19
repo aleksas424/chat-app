@@ -960,9 +960,14 @@ const Chat = () => {
   return (
     <div className="w-screen h-screen max-w-full max-h-screen overflow-x-hidden flex flex-col bg-gray-100 dark:bg-slate-900">
       <div className="flex flex-1 min-h-0 w-full max-w-full">
-        {/* Sidebar (hidden on mobile, open with button) */}
-        <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
-        <div className={`fixed z-50 inset-y-0 left-0 w-4/5 max-w-xs bg-slate-800/90 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-[-100%]'} md:w-72 md:max-w-xs md:block h-full flex flex-col z-20`}>
+        {/* Sidebar: Only show on mobile if sidebarOpen, always show on desktop */}
+        <div
+          className={`
+            ${sidebarOpen ? '' : 'hidden'}
+            fixed z-50 inset-y-0 left-0 w-4/5 max-w-xs bg-slate-800/90 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl
+            transform transition-transform duration-200 md:static md:translate-x-0 md:w-72 md:max-w-xs md:block h-full flex flex-col z-20
+          `}
+        >
           <div className="p-4 md:p-6 flex flex-col h-full">
             <div className="flex justify-between items-center mb-4 md:mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
@@ -1025,8 +1030,8 @@ const Chat = () => {
             </div>
           </div>
         </div>
-        {/* Main chat area */}
-        <div className="flex-1 flex flex-col h-full min-h-0 max-w-full">
+        {/* Chat area: Only show on mobile if sidebarOpen is false, always show on desktop */}
+        <div className={`flex-1 flex flex-col h-full min-h-0 max-w-full ${sidebarOpen ? 'hidden' : ''} md:block`}>
           {/* Chat Header */}
           <div className="flex-none p-2 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between w-full max-w-full" style={{backdropFilter: 'blur(8px)'}}>
             {/* Burger menu button on mobile */}
