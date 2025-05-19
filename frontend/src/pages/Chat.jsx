@@ -275,13 +275,27 @@ const Chat = () => {
   const sendMessage = async (e) => {
     e.preventDefault();
     if (newMessage.trim() && selectedChat) {
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMessage = {
+        id: tempId,
+        chatId: selectedChat.id,
+        sender_id: user.id,
+        senderId: user.id,
+        sender_name: user.first_name + ' ' + user.last_name,
+        content: newMessage,
+        created_at: new Date().toISOString(),
+        edited: false,
+        reactions: [],
+      };
+      setMessages(prev => [...prev, optimisticMessage]);
+      setNewMessage('');
       try {
-        await axios.post(`${API_URL}/api/chat/${selectedChat.id}/messages`, {
+        const res = await axios.post(`${API_URL}/api/chat/${selectedChat.id}/messages`, {
           content: newMessage
         });
-        setNewMessage('');
-        // Nebeatnaujiname žinučių sąrašo čia, nes žinutė ateina per socket
+        setMessages(prev => prev.map(m => m.id === tempId ? res.data : m));
       } catch (error) {
+        setMessages(prev => prev.filter(m => m.id !== tempId));
         toast.error('Nepavyko išsiųsti žinutės');
       }
     }
@@ -774,16 +788,12 @@ const Chat = () => {
     const userId = user.id;
     const reactions = messageReactions[messageId] || [];
     const userReaction = reactions.find(r => r.user_id === userId);
-
-    // Jei jau pasirinkta ta pati emoji, nieko nedaryti
     if (userReaction && userReaction.emoji === emoji) {
       setShowEmojiPicker(false);
       setSelectedMessageForEmoji(null);
       return;
     }
-
     try {
-      // Pridėti arba pakeisti reakciją
       await axios.post(
         `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
         { emoji },
@@ -868,8 +878,7 @@ const Chat = () => {
   };
 
   const renderMessage = (message) => {
-    const isOwner = message.sender_id === user?.id;
-    // Grupės/kanalo adminas gali trinti bet kurią žinutę, savininkas – visas žinutes, narys – tik savo
+    const isOwner = message.sender_id === user?.id || message.senderId === user?.id;
     let canDelete = false;
     if (myRole === 'owner') canDelete = true;
     else if (myRole === 'admin') canDelete = true;
