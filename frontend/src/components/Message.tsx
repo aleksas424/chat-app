@@ -15,6 +15,8 @@ export const Message: React.FC<MessageProps> = ({ message, chatId, onMessageUpda
   const { user } = useAuth();
   const isOwnMessage = user?.id === message.senderId;
   const [showActions, setShowActions] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const {
     isEditing,
     editingMessageId,
@@ -32,6 +34,15 @@ export const Message: React.FC<MessageProps> = ({ message, chatId, onMessageUpda
     } catch (error) {
       console.error('Error updating message:', error);
     }
+  };
+
+  const handleEmojiReaction = (emoji: string) => {
+    if (selectedEmoji === emoji) {
+      setSelectedEmoji(null);
+    } else {
+      setSelectedEmoji(emoji);
+    }
+    setShowEmojiPicker(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -81,6 +92,52 @@ export const Message: React.FC<MessageProps> = ({ message, chatId, onMessageUpda
           )}
         </div>
         
+        <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-1">
+            {['👍', '😂', '❤️', '😮', '😢', '🔥'].map(emoji => {
+              const hasReacted = selectedEmoji === emoji;
+              const count = message.reactions?.[emoji] || 0;
+              
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiReaction(emoji)}
+                  className={`text-xl ${hasReacted ? 'text-blue-500' : 'text-gray-500'} hover:text-blue-500 transition-colors`}
+                  title={`${count} ${count === 1 ? 'person' : 'people'} reacted with ${emoji}`}
+                >
+                  {emoji}
+                  {count > 0 && (
+                    <span className="ml-1 text-sm">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          
+          <button
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            Add reaction
+          </button>
+        </div>
+
+        {showEmojiPicker && (
+          <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 z-50">
+            {['👍', '😂', '❤️', '😮', '😢', '🔥'].map(emoji => (
+              <button
+                key={emoji}
+                onClick={() => handleEmojiReaction(emoji)}
+                className={`p-2 text-2xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+        
         <span className="text-xs text-gray-500 mt-1">
           {format(new Date(message.createdAt), 'HH:mm')}
           {message.updatedAt !== message.createdAt && ' (edited)'}
@@ -88,4 +145,4 @@ export const Message: React.FC<MessageProps> = ({ message, chatId, onMessageUpda
       </div>
     </div>
   );
-}; 
+};

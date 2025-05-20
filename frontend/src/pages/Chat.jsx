@@ -788,17 +788,23 @@ const Chat = () => {
     const userId = user.id;
     const reactions = messageReactions[messageId] || [];
     const userReaction = reactions.find(r => r.user_id === userId);
-    if (userReaction && userReaction.emoji === emoji) {
-      setShowEmojiPicker(false);
-      setSelectedMessageForEmoji(null);
-      return;
-    }
+    
     try {
-      await axios.post(
-        `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
-        { emoji },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      // If user already has a reaction, remove it
+      if (userReaction) {
+        await axios.delete(
+          `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')` } }
+        );
+      } else {
+        // Add new reaction
+        await axios.post(
+          `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
+          { emoji },
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        );
+      }
+      
       setShowEmojiPicker(false);
       setSelectedMessageForEmoji(null);
     } catch (error) {
