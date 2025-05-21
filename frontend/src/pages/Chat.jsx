@@ -7,6 +7,8 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import CreateGroupOrChannelModal from '../components/CreateGroupOrChannelModal';
 import AddMemberModal from '../components/AddMemberModal';
+import EmojiPicker from '../components/EmojiPicker';
+
 const typeIcon = {
   private: '💬',
   group: '👥',
@@ -35,6 +37,9 @@ const Chat = () => {
   const [showAddMember, setShowAddMember] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  const [messageReactions, setMessageReactions] = useState({});
+  const emojiList = ['👍', '😂', '❤️', '😮', '😢', '🔥'];
+  const [showEmojiPickerFor, setShowEmojiPickerFor] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -775,37 +780,55 @@ const Chat = () => {
       setMembers(response.data);
     } catch (error) {
       toast.error('Nepavyko pakeisti rolės');
+    }
+  };
 
   // 1. Emoji reakcijų siuntimas į backend (viena reakcija per vartotoją)
   const handleAddReaction = async (messageId, emoji) => {
+    const userId = user.id;
+    const reactions = messageReactions[messageId] || [];
+    const userReaction = reactions.find(r => r.user_id === userId);
+    if (userReaction && userReaction.emoji === emoji) {
+      setShowEmojiPicker(false);
+      setSelectedMessageForEmoji(null);
+      return;
+    }
     try {
-      const response = await axios.post(
+      await axios.post(
         `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}/reaction`,
         { emoji },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      
-      const updatedReactions = {
-        ...messageReactions[messageId],
-        [emoji]: (messageReactions[messageId]?.[emoji] || 0) + 1
-      };
-    };
-    setMessageReactions(prev => ({
-      ...prev,
-      [messageId]: updatedReactions
-    }));
-    
-    socket.emit('message_reaction', {
-      chatId,
-      messageId,
-      emoji,
-      reactions: updatedReactions
-    });
-  } catch (error) {
-    console.error('Error adding reaction:', error);
-    toast.error('Failed to add reaction');
+      setShowEmojiPicker(false);
+      setSelectedMessageForEmoji(null);
+    } catch (error) {
+      toast.error('Nepavyko pakeisti reakcijos');
+    }
   };
-}
+
+  // 2. Socket eventas reakcijoms
+  useEffect(() => {
+    if (!socket) return;
+    const handleNewReaction = ({ messageId, reactions }) => {
+      setMessageReactions(prev => ({ ...prev, [messageId]: reactions }));
+    };
+    socket.on('new-reaction', handleNewReaction);
+    return () => {
+      socket.off('new-reaction', handleNewReaction);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+  }, [selectedChat]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showEmojiPickerFor && !event.target.closest('.emoji-picker')) {
+        setShowEmojiPickerFor(null);
+      }
+    };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
