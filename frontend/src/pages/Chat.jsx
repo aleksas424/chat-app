@@ -1011,6 +1011,7 @@ const Chat = () => {
               onSubmit={e => {
                 e.preventDefault();
                 handleSearch(searchQuery);
+                setShowSearchInput(false);
               }}
             >
               <input
@@ -1023,6 +1024,13 @@ const Chat = () => {
                 aria-label="Ieškoti žinutės"
                 autoFocus
               />
+              <button
+                type="submit"
+                className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                aria-label="Ieškoti"
+              >
+                Ieškoti
+              </button>
               <button
                 type="button"
                 onClick={() => setShowSearchInput(false)}
@@ -1205,6 +1213,17 @@ const Chat = () => {
               {/* Messages + input */}
               <div className="flex flex-col flex-1 min-h-0 max-w-full">
                 <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-4 space-y-2 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-2xl md:rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full">
+                  {/* Show 'Grįžti į žinutes' button when search results are shown */}
+                  {(searchQuery && searchResults.length > 0) && (
+                    <div className="flex justify-center mb-4">
+                      <button
+                        className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                      >
+                        Grįžti į žinutes
+                      </button>
+                    </div>
+                  )}
                   <AnimatePresence>
                     {(searchQuery && searchResults.length > 0
                       ? searchResults
