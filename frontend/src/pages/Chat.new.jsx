@@ -7,7 +7,7 @@ import axios from 'axios';
 import CreateGroupOrChannelModal from '../components/CreateGroupOrChannelModal';
 import AddMemberModal from '../components/AddMemberModal';
 
-export default function Chat() {
+// This file is deprecated and not used. See Chat.jsx for the main chat implementation.
   const { user } = useAuth();
   const [newMessage, setNewMessage] = useState('');
   const [search, setSearch] = useState('');

@@ -1031,9 +1031,7 @@ const Chat = () => {
       </div>
     );
   }
-  >
-    {/* ... */}
-  </aside>
+  {/* Remove stray '>' and invalid fragment. If you need an aside/sidebar, render it properly here. */}
   <main className="flex-1 flex flex-col chat-area">
     {/* Chat header, messages, input area */}
     <section className="flex-1 flex flex-col overflow-hidden">
@@ -1049,38 +1047,7 @@ const Chat = () => {
               key="welcome"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 text-lg mt-12"
-            >
-              <span>👋 Sveiki atvykę! Pradėkite pokalbį.</span>
-            </motion.div>
-      onClose={() => setShowEmojiPicker(false)}
-    />
-  </div>
-)}
-</form>
-</div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-lg">
-              Pasirinkite pokalbį
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {showEmojiPicker && (
-        <EmojiPicker
-          onSelect={handleAddEmoji}
-          onClose={() => {
-            setShowEmojiPicker(false);
-            setSelectedMessageForEmoji(null);
-          }}
-        />
-      )}
-
-      {showCreateTypeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          </AnimatePresence>
           <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-8 w-full max-w-xs flex flex-col gap-4 items-center">
             <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Ką norite sukurti?</h3>
             <button
