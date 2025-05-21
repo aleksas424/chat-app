@@ -789,8 +789,23 @@ const Chat = () => {
         ...messageReactions[messageId],
         [emoji]: (messageReactions[messageId]?.[emoji] || 0) + 1
       };
-      }
     };
+    setMessageReactions(prev => ({
+      ...prev,
+      [messageId]: updatedReactions
+    }));
+    
+    socket.emit('message_reaction', {
+      chatId,
+      messageId,
+      emoji,
+      reactions: updatedReactions
+    });
+  } catch (error) {
+    console.error('Error adding reaction:', error);
+    toast.error('Failed to add reaction');
+  };
+}
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
