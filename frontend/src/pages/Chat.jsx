@@ -9,6 +9,13 @@ import CreateGroupOrChannelModal from '../components/CreateGroupOrChannelModal';
 import AddMemberModal from '../components/AddMemberModal';
 import EmojiPicker from '../components/EmojiPicker';
 
+// Highlight funkcija paieškai (naudoti vietoje highlightText)
+function highlightSearch(text, query) {
+  if (!query) return text;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return text.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-700 rounded px-1">$1</mark>');
+}
+
 const typeIcon = {
   private: '💬',
   group: '👥',
@@ -60,6 +67,7 @@ const Chat = () => {
   const [showSearchInput, setShowSearchInput] = useState(false);
   const searchInputRef = useRef();
   const messageInputRef = useRef();
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -275,8 +283,10 @@ const Chat = () => {
   }, [socket, selectedChat, notificationSettings]);
 
   const sendMessage = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (sendingMessage) return;
     if (newMessage.trim() && selectedChat) {
+      setSendingMessage(true);
       const tempId = `temp-${Date.now()}`;
       const optimisticMessage = {
         id: tempId,
@@ -299,6 +309,8 @@ const Chat = () => {
       } catch (error) {
         setMessages(prev => prev.filter(m => m.id !== tempId));
         toast.error('Nepavyko išsiųsti žinutės');
+      } finally {
+        setSendingMessage(false);
       }
     }
   };
@@ -1019,363 +1031,33 @@ const Chat = () => {
       </div>
     );
   }
-
-  return (
-    <div className="w-screen h-screen max-w-full max-h-screen overflow-x-hidden flex flex-col bg-gray-100 dark:bg-slate-900">
-      {/* Search overlay at the END of the main return */}
-      {showSearchInput && (
-        <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-md mt-24 bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col items-center">
-            <form
-              className="w-full flex items-center gap-2"
-              onSubmit={e => {
-                e.preventDefault();
-                handleSearch(searchQuery);
-                setShowSearchInput(false);
-              }}
+  >
+    {/* ... */}
+  </aside>
+  <main className="flex-1 flex flex-col chat-area">
+    {/* Chat header, messages, input area */}
+    <section className="flex-1 flex flex-col overflow-hidden">
+      {/* Chat header */}
+      <header className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-slate-700 animate-fade-in-down">
+        {/* ... */}
+      </header>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-2" ref={messagesEndRef}>
+        <AnimatePresence>
+          {messages.length === 0 ? (
+            <motion.div
+              key="welcome"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 text-lg mt-12"
             >
-              <input
-                ref={searchInputRef}
-                type="text"
-                className="flex-1 rounded-lg px-4 py-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-base shadow"
-                placeholder="Ieškoti žinutės..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                aria-label="Ieškoti žinutės"
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                aria-label="Ieškoti"
-              >
-                Ieškoti
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowSearchInput(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                aria-label="Uždaryti paiešką"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-      <div className="flex flex-1 min-h-0 w-full max-w-full">
-        {/* Sidebar: Only show on mobile if sidebarOpen, always show on desktop */}
-        <div
-          className={`
-            ${sidebarOpen ? '' : 'hidden'}
-            fixed z-50 inset-y-0 left-0 w-4/5 max-w-xs bg-slate-800/90 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl
-            transform transition-transform duration-200 md:static md:translate-x-0 md:w-72 md:max-w-xs md:block h-full flex flex-col z-20
-          `}
-        >
-          <div className="p-4 md:p-6 flex flex-col h-full overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 md:mb-6">
-              <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
-              <button
-                className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow hover:from-blue-600 hover:to-indigo-700 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 font-semibold text-sm md:text-base"
-                onClick={() => setShowCreateTypeModal(true)}
-                aria-label="Naujas pokalbis"
-                title="Naujas pokalbis"
-              >
-                + Naujas
-              </button>
-            </div>
-            <input
-              type="text"
-              placeholder="Ieškoti pokalbių..."
-              className="w-full mb-4 md:mb-6 px-3 py-2 md:px-4 md:py-3 rounded-xl border-none bg-white/40 dark:bg-slate-700/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow text-sm md:text-base"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              aria-label="Ieškoti pokalbių"
-            />
-            <div className="space-y-2 md:space-y-3 flex-1 min-h-0 overflow-y-auto">
-              {filteredChats.length === 0 && (
-                <div className="text-slate-400 text-center py-4 md:py-8 text-sm md:text-base">No chats found</div>
-              )}
-              <div className="flex flex-col gap-2 md:gap-3">
-                {filteredChats.length === 0 && chats.length === 0 && (
-                  <div className="text-center text-gray-400 py-8">No chats available</div>
-                )}
-                {filteredChats.map(chat => (
-                  <motion.div
-                    key={chat.id}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-2xl cursor-pointer transition-colors duration-100 shadow-md ${
-                      selectedChat?.id === chat.id
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'
-                        : 'bg-white/30 dark:bg-slate-700/60 hover:bg-blue-500/20 dark:hover:bg-blue-700/40 text-slate-900 dark:text-white'
-                    }`}
-                    onClick={() => handleSelectChat(chat)}
-                    tabIndex={0}
-                    aria-label={`Pasirinkti pokalbį: ${chat.display_name}`}
-                    title={chat.display_name}
-                  >
-                    {/* Avatar */}
-                    <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                      {(() => {
-                        const parts = (chat.display_name || '').split(' ');
-                        const first = (parts[0] && parts[0][0]) ? parts[0][0].toUpperCase() : '';
-                        const last = (parts[1] && parts[1][0]) ? parts[1][0].toUpperCase() : '';
-                        return first + last;
-                      })()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 md:gap-2">
-                        <span className="font-semibold truncate text-sm md:text-base" title={chat.display_name}>
-                          {chat.display_name}
-                        </span>
-                        <span className="text-xs text-blue-200">{chat.type}</span>
-                      </div>
-                      <div className="text-xs md:text-sm text-blue-100 truncate" title={chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}>
-                        {chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        {/* Chat area: Only show on mobile if sidebarOpen is false, always show on desktop */}
-        <div className={`flex-1 flex flex-col h-full min-h-0 max-w-full ${sidebarOpen ? 'hidden' : ''} md:block overflow-y-auto`}>
-          {selectedChat ? (
-            <>
-              {/* Chat Header */}
-              <div className="flex-none p-2 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between w-full max-w-full" style={{backdropFilter: 'blur(8px)'}}>
-                {/* Burger menu button on mobile */}
-                <button
-                  onClick={() => setSidebarOpen(v => !v)}
-                  className="md:hidden p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 mr-2"
-                  aria-label="Atidaryti/uždaryti pokalbių sąrašą"
-                  title="Atidaryti/uždaryti pokalbių sąrašą"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-                <div className="flex items-center gap-2 md:gap-3">
-                  <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg md:text-xl shadow-lg">
-                    {(() => {
-                      const parts = (selectedChat.display_name || '').split(' ');
-                      const first = (parts[0] && parts[0][0]) ? parts[0][0].toUpperCase() : '';
-                      const last = (parts[1] && parts[1][0]) ? parts[1][0].toUpperCase() : '';
-                      return first + last;
-                    })()}
-                  </div>
-                  <div>
-                    <h2 className="text-base md:text-lg font-semibold text-slate-900 dark:text-white truncate max-w-[120px] md:max-w-xs" title={selectedChat.display_name}>
-                      {selectedChat.display_name}
-                    </h2>
-                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">
-                      {selectedChat.type}
-                    </p>
-                  </div>
-                </div>
-                {/* Search Button and Input */}
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSearchInput(!showSearchInput);
-                      setTimeout(() => searchInputRef.current?.focus(), 100);
-                    }}
-                    className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    title="Ieškoti žinutės"
-                    aria-label="Ieškoti žinutės"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
-                    </svg>
-                  </button>
-                </div>
-                {selectedChat.type === 'private' ? (
-                  <button
-                    onClick={async () => {
-                      if (window.confirm('Ar tikrai norite ištrinti šį pokalbį?')) {
-                        try {
-                          await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, {
-                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                          });
-                          setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
-                          setSelectedChat(null);
-                          toast.success('Pokalbis ištrintas');
-                        } catch (error) {
-                          toast.error('Nepavyko ištrinti pokalbio');
-                        }
-                      }
-                    }}
-                    className="p-1.5 md:p-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm md:text-base transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    title="Ištrinti pokalbį"
-                    aria-label="Ištrinti pokalbį"
-                  >
-                    🗑️
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setShowMembersModal(true)}
-                    className="p-1.5 md:p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    title="Rodyti narius"
-                    aria-label="Rodyti narius"
-                  >
-                    <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-              {/* Messages + input */}
-              <div className="flex flex-col flex-1 min-h-0 max-w-full relative">
-  <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-4 space-y-2 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-2xl md:rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full relative">
-  {/* Pinned žinutė */}
-  {pinnedMessage && (
-    <div className="sticky top-0 z-20 mb-2 p-3 rounded-2xl bg-gradient-to-r from-yellow-200/90 to-yellow-400/80 dark:from-yellow-700/70 dark:to-yellow-900/80 shadow-lg border border-yellow-400 dark:border-yellow-700 flex items-center gap-2 animate-fade-in">
-      <span className="text-xl">📌</span>
-      <span className="flex-1 truncate font-semibold">{pinnedMessage.content}</span>
-      <button className="ml-2 px-2 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-300 text-xs" onClick={() => handleUnpinMessage(pinnedMessage.id)} aria-label="Atsegti žinutę">Atsegti</button>
-    </div>
-  )}
-  {/* Typing indikatorius */}
-  {Object.values(typingUsers).some(Boolean) && (
-    <div className="absolute left-0 bottom-12 flex items-center gap-2 px-4 py-1 bg-blue-100 dark:bg-blue-900 rounded-full shadow animate-pulse z-30">
-      <span className="w-6 h-6 rounded-full bg-blue-400 flex items-center justify-center text-white font-bold">💬</span>
-      <span className="text-gray-600 dark:text-gray-200 text-sm">Rašo žinutę...</span>
-    </div>
-  )}
-    {/* Show 'Grįžti į žinutes' button when search results are shown */}
-    {isSearching && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl p-6 w-full max-w-lg mx-auto relative animate-fade-in">
-      <button
-        className="absolute top-3 right-3 p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        onClick={() => { setSearchQuery(''); setSearchResults([]); setIsSearching(false); }}
-        aria-label="Grįžti į žinutes"
-      >✕</button>
-      <h2 className="text-lg font-bold mb-2 text-gray-900 dark:text-white flex items-center gap-2">
-        Paieška
-        {searchResults.length > 0 && (
-          <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 text-xs animate-pulse">{searchResults.length} rasta</span>
-        )}
-      </h2>
-      <div className="max-h-96 overflow-y-auto space-y-4">
-        {searchResults.length > 0 ? searchResults.map(message => (
-          <div key={message.id} className="p-3 rounded-lg bg-gradient-to-br from-blue-100/80 to-blue-200/80 dark:from-blue-900/70 dark:to-blue-800/70 shadow">
-            <span className="font-semibold text-blue-700 dark:text-blue-200">
-              {message.senderName || message.sender?.username || 'Vartotojas'}:
-            </span>
-            <span className="ml-2" dangerouslySetInnerHTML={{__html: highlightSearch(message.content, searchQuery)}} />
-            <span className="block text-xs text-gray-400 mt-1">{new Date(message.createdAt).toLocaleString()}</span>
-          </div>
-        )) : (
-          <div className="flex flex-col items-center justify-center py-12">
-            <span className="text-5xl mb-2">🔍</span>
-            <span className="text-gray-400 text-lg">Nerasta žinučių pagal paiešką</span>
-          </div>
-        )}
-      </div>
-      <button
-        className="mt-6 w-full py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        onClick={() => { setSearchQuery(''); setSearchResults([]); setIsSearching(false); }}
-        aria-label="Grįžti į žinutes"
-      >Grįžti į žinutes</button>
-    </div>
-  </div>
-)}
-    <AnimatePresence>
-      {(searchQuery && searchResults.length > 0
-        ? searchResults
-        : !searchQuery && messages.length > 0
-          ? messages
-          : []
-      ).map(message => (
-        <motion.div
-          key={message.id}
-          id={`message-${message.id}`}
-          data-message-id={message.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className={`flex ${
-            (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
-          }`}
-        >
-          {renderMessage(message)}
-        </motion.div>
-      ))}
-      {(searchQuery && searchResults.length === 0) && (
-        <div className="text-center text-gray-400 py-8">Nerasta žinučių pagal paiešką</div>
-      )}
-    </AnimatePresence>
-  </div>
-  {/* Fiksuotas įvedimo laukas */}
-  <form
-  onSubmit={sendMessage}
-  className="flex-none flex items-center gap-2 p-2 md:p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full fixed bottom-0 left-0 md:left-80 z-40"
-  style={{maxWidth: 'calc(100vw - 0px)', width: '100%', boxSizing: 'border-box'}}
->
-  <input
-    type="file"
-    style={{ display: 'none' }}
-    id="file-upload"
-    onChange={e => {
-      if (e.target.files && e.target.files[0]) {
-        handleFileUpload(e.target.files[0]);
-        e.target.value = '';
-      }
-    }}
-    aria-label="Prisegti failą"
-  />
-  <label htmlFor="file-upload" className="cursor-pointer p-2 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800 focus:ring-2 focus:ring-blue-400 transition-all" title="Prisegti failą" aria-label="Prisegti failą">
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 108.485 8.485l6.364-6.364" /></svg>
-  </label>
-  {/* Emoji picker mygtukas */}
-  <button
-    type="button"
-    className="p-2 rounded bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-800 focus:ring-2 focus:ring-yellow-400 transition-all"
-    aria-label="Įterpti emoji"
-    title="Emoji"
-    onClick={() => setShowEmojiPicker(true)}
-  >
-    <span className="text-xl">😊</span>
-  </button>
-  <input
-    type="text"
-    className="flex-1 p-2 rounded border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-    placeholder="Įveskite žinutę..."
-    value={newMessage}
-    onChange={e => setNewMessage(e.target.value)}
-    inputMode="text"
-    autoComplete="on"
-    ref={messageInputRef}
-    aria-label="Įveskite žinutę"
-    onKeyDown={e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (newMessage.trim()) sendMessage(e);
-      }
-    }}
-  />
-  <button
-    type="submit"
-    className="p-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-    disabled={!newMessage.trim()}
-    aria-label="Siųsti žinutę"
-    title="Siųsti žinutę"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-  </button>
-  {showEmojiPicker && (
-    <EmojiPicker
-      onSelect={emoji => setNewMessage(prev => prev + emoji)}
+              <span>👋 Sveiki atvykę! Pradėkite pokalbį.</span>
+            </motion.div>
       onClose={() => setShowEmojiPicker(false)}
     />
-  )}
+  </div>
+)}
 </form>
 </div>
             </>
