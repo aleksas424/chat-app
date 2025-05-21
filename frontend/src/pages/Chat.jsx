@@ -1132,7 +1132,7 @@ const Chat = () => {
                     </svg>
                   </button>
                   {showSearchInput && (
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg p-2 z-50">
+                    <div className="fixed md:absolute right-4 left-4 md:left-auto md:w-64 top-16 md:top-auto md:right-0 md:mt-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl p-2 z-50 border border-gray-200 dark:border-gray-700">
                       <form
                         className="flex items-center gap-2"
                         onSubmit={e => {
@@ -1143,7 +1143,7 @@ const Chat = () => {
                         <input
                           ref={searchInputRef}
                           type="text"
-                          className="flex-1 rounded-lg px-3 py-2 bg-white/60 dark:bg-slate-700/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                          className="flex-1 rounded-lg px-3 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
                           placeholder="Ieškoti žinutės..."
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
