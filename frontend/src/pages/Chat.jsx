@@ -1002,6 +1002,41 @@ const Chat = () => {
 
   return (
     <div className="w-screen h-screen max-w-full max-h-screen overflow-x-hidden flex flex-col bg-gray-100 dark:bg-slate-900">
+      {/* Search overlay at the END of the main return */}
+      {showSearchInput && (
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md mt-24 bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col items-center">
+            <form
+              className="w-full flex items-center gap-2"
+              onSubmit={e => {
+                e.preventDefault();
+                handleSearch(searchQuery);
+              }}
+            >
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="flex-1 rounded-lg px-4 py-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-base shadow"
+                placeholder="Ieškoti žinutės..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                aria-label="Ieškoti žinutės"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => setShowSearchInput(false)}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                aria-label="Uždaryti paiešką"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       <div className="flex flex-1 min-h-0 w-full max-w-full">
         {/* Sidebar: Only show on mobile if sidebarOpen, always show on desktop */}
         <div
@@ -1430,40 +1465,5 @@ const Chat = () => {
   );
 };
 
-  {/* Search overlay at the END of the main return */}
-  {showSearchInput && (
-    <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-md mt-24 bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col items-center">
-        <form
-          className="w-full flex items-center gap-2"
-          onSubmit={e => {
-            e.preventDefault();
-            handleSearch(searchQuery);
-          }}
-        >
-          <input
-            ref={searchInputRef}
-            type="text"
-            className="flex-1 rounded-lg px-4 py-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 text-base shadow"
-            placeholder="Ieškoti žinutės..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            aria-label="Ieškoti žinutės"
-            autoFocus
-          />
-          <button
-            type="button"
-            onClick={() => setShowSearchInput(false)}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            aria-label="Uždaryti paiešką"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </form>
-      </div>
-    </div>
-  )}
 
 export default Chat;
