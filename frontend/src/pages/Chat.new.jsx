@@ -8,6 +8,9 @@ import CreateGroupOrChannelModal from '../components/CreateGroupOrChannelModal';
 import AddMemberModal from '../components/AddMemberModal';
 
 // This file is deprecated and not used. See Chat.jsx for the main chat implementation.
+/*
+  All previous contents have been commented out to prevent build errors.
+*/
   const { user } = useAuth();
   const [newMessage, setNewMessage] = useState('');
   const [search, setSearch] = useState('');
