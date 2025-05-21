@@ -889,8 +889,14 @@ const Chat = () => {
     const userReaction = messageReactions[message.id]?.find(r => r.user_id === user?.id);
     const isEditing = editingMessage === message.id;
     return (
-      <div key={message.id} className={`flex ${isOwner ? 'justify-end' : 'justify-start'} mb-4`}>
-        <div className={`max-w-[90vw] md:max-w-[70%] ${isOwner ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-2xl p-4 relative shadow-lg break-words transition-all`} style={{minWidth: 120}}>
+      <div key={message.id} className={`flex ${isOwner ? 'justify-end' : 'justify-start'} mb-4 group`}>
+        <div className={`relative max-w-[90vw] md:max-w-[70%] p-4 shadow-xl break-words transition-all
+          ${isOwner ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' : 'bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 text-gray-900 dark:text-white'}
+          rounded-2xl animate-fade-in`} style={{minWidth: 120}}>
+          {/* Tail efektas */}
+          <span className={`absolute ${isOwner ? 'right-0' : 'left-0'} bottom-0 w-4 h-4
+            ${isOwner ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-800'}
+            rounded-bl-2xl transform ${isOwner ? 'translate-x-1/2' : '-translate-x-1/2'} scale-75 z-0`}></span>
           {!isOwner && (
             <div className="text-xs text-gray-400 dark:text-gray-300 mb-2 font-semibold tracking-wide">
               {message.sender_name}
@@ -918,26 +924,40 @@ const Chat = () => {
             </form>
           ) : (
             <>
-              <div className="text-base md:text-lg font-medium mb-2 whitespace-pre-line">{message.content}</div>
+              {/* Highlight paieškos žodžius */}
+              <div className="text-base md:text-lg font-medium mb-2 whitespace-pre-line">
+                {searchQuery && searchQuery.length > 1 ? (
+                  highlightText(message.content, searchQuery)
+                ) : (
+                  message.content
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {canEdit && (
                   <button
+                    aria-label="Redaguoti žinutę"
                     onClick={() => { setEditingMessage(message.id); setEditContent(message.content); }}
-                    className="text-xs text-blue-600 hover:text-white px-2 py-1 rounded bg-blue-100 dark:bg-blue-700/40 hover:bg-blue-500/80 transition"
-                  >Redaguoti</button>
+                    className="text-xs text-blue-600 hover:text-white px-2 py-1 rounded bg-blue-100 dark:bg-blue-700/40 hover:bg-blue-500/80 transition focus:ring-2 focus:ring-blue-400"
+                  >
+                    <svg className="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 019 17H7v-2a2 2 0 01.586-1.414z" /></svg>Redaguoti
+                  </button>
                 )}
                 {canDelete && (
                   <button
+                    aria-label="Ištrinti žinutę"
                     onClick={() => handleDeleteMessage(message.id)}
-                    className="text-xs text-red-600 hover:text-white px-2 py-1 rounded bg-red-100 dark:bg-red-700/30 hover:bg-red-500/80 transition"
-                  >Ištrinti</button>
+                    className="text-xs text-red-600 hover:text-white px-2 py-1 rounded bg-red-100 dark:bg-red-700/30 hover:bg-red-500/80 transition focus:ring-2 focus:ring-red-400"
+                  >
+                    <svg className="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22" /></svg>Ištrinti
+                  </button>
                 )}
                 <button
+                  aria-label="Pridėti reakciją"
                   onClick={() => {
                     setSelectedMessageForEmoji(message.id);
                     setShowEmojiPicker(true);
                   }}
-                  className={`text-xs px-2 py-1 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-700 transition ${userReaction ? 'ring-2 ring-blue-400' : ''}`}
+                  className={`text-xs px-2 py-1 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-700 transition focus:ring-2 focus:ring-blue-400 scale-110 active:scale-125 duration-150 ${userReaction ? 'ring-2 ring-blue-400' : ''}`}
                   title="Pridėti reakciją"
                   style={{fontSize: '1.2em'}}
                 >{userReaction ? userReaction.emoji : '😊'}</button>
@@ -950,7 +970,7 @@ const Chat = () => {
                         return acc;
                       }, {})
                     ).map(([emoji, count]) => (
-                      <span key={emoji} className="text-sm">
+                      <span key={emoji} className="text-base animate-bounce inline-block">
                         {emoji} {count > 1 ? count : ''}
                       </span>
                     ))}
@@ -1211,86 +1231,153 @@ const Chat = () => {
                 )}
               </div>
               {/* Messages + input */}
-              <div className="flex flex-col flex-1 min-h-0 max-w-full">
-                <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-4 space-y-2 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-2xl md:rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full">
-                  {/* Show 'Grįžti į žinutes' button when search results are shown */}
-                  {(searchQuery && searchResults.length > 0) && (
-                    <div className="flex justify-center mb-4">
-                      <button
-                        className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        onClick={() => { setSearchQuery(''); setSearchResults([]); }}
-                      >
-                        Grįžti į žinutes
-                      </button>
-                    </div>
-                  )}
-                  <AnimatePresence>
-                    {(searchQuery && searchResults.length > 0
-                      ? searchResults
-                      : !searchQuery && messages.length > 0
-                        ? messages
-                        : []
-                    ).map(message => (
-                      <motion.div
-                        key={message.id}
-                        id={`message-${message.id}`}
-                        data-message-id={message.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className={`flex ${
-                          (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
-                        }`}
-                      >
-                        {renderMessage(message)}
-                      </motion.div>
-                    ))}
-                    {(searchQuery && searchResults.length === 0) && (
-                      <div className="text-center text-gray-400 py-8">Nerasta žinučių pagal paiešką</div>
-                    )}
-                  </AnimatePresence>
-                </div>
-                <form
-                  onSubmit={sendMessage}
-                  className="flex-none flex items-center gap-2 p-2 md:p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full"
-                >
-                  <input
-                    type="file"
-                    style={{ display: 'none' }}
-                    id="file-upload"
-                    onChange={e => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleFileUpload(e.target.files[0]);
-                        e.target.value = '';
-                      }
-                    }}
-                    aria-label="Prisegti failą"
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer p-2 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800" title="Prisegti failą" aria-label="Prisegti failą">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 108.485 8.485l6.364-6.364" /></svg>
-                  </label>
-                  <input
-                    type="text"
-                    className="flex-1 p-2 rounded border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    placeholder="Įveskite žinutę..."
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    inputMode="text"
-                    autoComplete="on"
-                    ref={messageInputRef}
-                    aria-label="Įveskite žinutę"
-                  />
-                  <button
-                    type="submit"
-                    className="p-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    disabled={!newMessage.trim()}
-                    aria-label="Siųsti žinutę"
-                    title="Siųsti žinutę"
-                  >
-                    Siųsti
-                  </button>
-                </form>
-              </div>
+              <div className="flex flex-col flex-1 min-h-0 max-w-full relative">
+  <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-4 space-y-2 md:space-y-4 bg-white/10 dark:bg-slate-800/40 rounded-2xl md:rounded-3xl shadow-xl backdrop-blur-md w-full max-w-full relative">
+  {/* Pinned žinutė */}
+  {pinnedMessage && (
+    <div className="sticky top-0 z-20 mb-2 p-3 rounded-2xl bg-gradient-to-r from-yellow-200/90 to-yellow-400/80 dark:from-yellow-700/70 dark:to-yellow-900/80 shadow-lg border border-yellow-400 dark:border-yellow-700 flex items-center gap-2 animate-fade-in">
+      <span className="text-xl">📌</span>
+      <span className="flex-1 truncate font-semibold">{pinnedMessage.content}</span>
+      <button className="ml-2 px-2 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-300 text-xs" onClick={() => handleUnpinMessage(pinnedMessage.id)} aria-label="Atsegti žinutę">Atsegti</button>
+    </div>
+  )}
+  {/* Typing indikatorius */}
+  {Object.values(typingUsers).some(Boolean) && (
+    <div className="absolute left-0 bottom-12 flex items-center gap-2 px-4 py-1 bg-blue-100 dark:bg-blue-900 rounded-full shadow animate-pulse z-30">
+      <span className="w-6 h-6 rounded-full bg-blue-400 flex items-center justify-center text-white font-bold">💬</span>
+      <span className="text-gray-600 dark:text-gray-200 text-sm">Rašo žinutę...</span>
+    </div>
+  )}
+    {/* Show 'Grįžti į žinutes' button when search results are shown */}
+    {isSearching && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl p-6 w-full max-w-lg mx-auto relative animate-fade-in">
+      <button
+        className="absolute top-3 right-3 p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        onClick={() => { setSearchQuery(''); setSearchResults([]); setIsSearching(false); }}
+        aria-label="Grįžti į žinutes"
+      >✕</button>
+      <h2 className="text-lg font-bold mb-2 text-gray-900 dark:text-white flex items-center gap-2">
+        Paieška
+        {searchResults.length > 0 && (
+          <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 text-xs animate-pulse">{searchResults.length} rasta</span>
+        )}
+      </h2>
+      <div className="max-h-96 overflow-y-auto space-y-4">
+        {searchResults.length > 0 ? searchResults.map(message => (
+          <div key={message.id} className="p-3 rounded-lg bg-gradient-to-br from-blue-100/80 to-blue-200/80 dark:from-blue-900/70 dark:to-blue-800/70 shadow">
+            <span className="font-semibold text-blue-700 dark:text-blue-200">
+              {message.senderName || message.sender?.username || 'Vartotojas'}:
+            </span>
+            <span className="ml-2" dangerouslySetInnerHTML={{__html: highlightSearch(message.content, searchQuery)}} />
+            <span className="block text-xs text-gray-400 mt-1">{new Date(message.createdAt).toLocaleString()}</span>
+          </div>
+        )) : (
+          <div className="flex flex-col items-center justify-center py-12">
+            <span className="text-5xl mb-2">🔍</span>
+            <span className="text-gray-400 text-lg">Nerasta žinučių pagal paiešką</span>
+          </div>
+        )}
+      </div>
+      <button
+        className="mt-6 w-full py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        onClick={() => { setSearchQuery(''); setSearchResults([]); setIsSearching(false); }}
+        aria-label="Grįžti į žinutes"
+      >Grįžti į žinutes</button>
+    </div>
+  </div>
+)}
+    <AnimatePresence>
+      {(searchQuery && searchResults.length > 0
+        ? searchResults
+        : !searchQuery && messages.length > 0
+          ? messages
+          : []
+      ).map(message => (
+        <motion.div
+          key={message.id}
+          id={`message-${message.id}`}
+          data-message-id={message.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className={`flex ${
+            (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
+          }`}
+        >
+          {renderMessage(message)}
+        </motion.div>
+      ))}
+      {(searchQuery && searchResults.length === 0) && (
+        <div className="text-center text-gray-400 py-8">Nerasta žinučių pagal paiešką</div>
+      )}
+    </AnimatePresence>
+  </div>
+  {/* Fiksuotas įvedimo laukas */}
+  <form
+  onSubmit={sendMessage}
+  className="flex-none flex items-center gap-2 p-2 md:p-4 border-t bg-white/30 dark:bg-slate-800/60 backdrop-blur-md w-full max-w-full fixed bottom-0 left-0 md:left-80 z-40"
+  style={{maxWidth: 'calc(100vw - 0px)', width: '100%', boxSizing: 'border-box'}}
+>
+  <input
+    type="file"
+    style={{ display: 'none' }}
+    id="file-upload"
+    onChange={e => {
+      if (e.target.files && e.target.files[0]) {
+        handleFileUpload(e.target.files[0]);
+        e.target.value = '';
+      }
+    }}
+    aria-label="Prisegti failą"
+  />
+  <label htmlFor="file-upload" className="cursor-pointer p-2 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800 focus:ring-2 focus:ring-blue-400 transition-all" title="Prisegti failą" aria-label="Prisegti failą">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l7.07-7.07a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 108.485 8.485l6.364-6.364" /></svg>
+  </label>
+  {/* Emoji picker mygtukas */}
+  <button
+    type="button"
+    className="p-2 rounded bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-800 focus:ring-2 focus:ring-yellow-400 transition-all"
+    aria-label="Įterpti emoji"
+    title="Emoji"
+    onClick={() => setShowEmojiPicker(true)}
+  >
+    <span className="text-xl">😊</span>
+  </button>
+  <input
+    type="text"
+    className="flex-1 p-2 rounded border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+    placeholder="Įveskite žinutę..."
+    value={newMessage}
+    onChange={e => setNewMessage(e.target.value)}
+    inputMode="text"
+    autoComplete="on"
+    ref={messageInputRef}
+    aria-label="Įveskite žinutę"
+    onKeyDown={e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (newMessage.trim()) sendMessage(e);
+      }
+    }}
+  />
+  <button
+    type="submit"
+    className="p-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+    disabled={!newMessage.trim()}
+    aria-label="Siųsti žinutę"
+    title="Siųsti žinutę"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+  </button>
+  {showEmojiPicker && (
+    <EmojiPicker
+      onSelect={emoji => setNewMessage(prev => prev + emoji)}
+      onClose={() => setShowEmojiPicker(false)}
+    />
+  )}
+</form>
+</div>
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-lg">
