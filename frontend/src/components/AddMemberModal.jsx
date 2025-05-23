@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 
-const AddMemberModal = ({ chatId, onClose, onAdded, existingMembers = [] }) => {
+const AddMemberModal = ({ chatId, onClose, onAdded }) => {
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [search, setSearch] = useState('');
@@ -33,39 +33,23 @@ const AddMemberModal = ({ chatId, onClose, onAdded, existingMembers = [] }) => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      let atLeastOne = false;
-      for (const u of selectedUsers) {
-        try {
-          await axios.post(
-            `${API_URL}/api/group/${chatId}/members`,
-            { userId: u.id },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          atLeastOne = true;
-        } catch (err) {
-          if (err.response && err.response.data && err.response.data.message) {
-            setError(err.response.data.message);
-          } else {
-            setError('Nepavyko pridėti narių.');
-          }
-        }
-      }
-      if (atLeastOne) {
-        onAdded && onAdded();
-        onClose();
-        return;
-      }
+      await axios.post(
+        `${API_URL}/api/group/${chatId}/members`,
+        { members: selectedUsers.map(u => u.id) },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      onAdded && onAdded();
+      onClose();
+    } catch (e) {
       setError('Nepavyko pridėti narių.');
     } finally {
       setLoading(false);
     }
   };
 
-  const existingIds = existingMembers.map(m => m.id);
   const filteredUsers = users.filter(u =>
-    (u.first_name + ' ' + u.last_name).toLowerCase().includes(search.toLowerCase()) &&
-    !selectedUsers.some(su => su.id === u.id) &&
-    !existingIds.includes(u.id)
+    u.name.toLowerCase().includes(search.toLowerCase()) &&
+    !selectedUsers.some(su => su.id === u.id)
   );
 
   return (
@@ -91,8 +75,8 @@ const AddMemberModal = ({ chatId, onClose, onAdded, existingMembers = [] }) => {
           <div className="flex flex-wrap gap-2 mb-2">
             {selectedUsers.map(u => (
               <span key={u.id} className="flex items-center gap-1 px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded-full text-xs">
-                {u.first_name + ' ' + u.last_name}
-                <button onClick={() => setSelectedUsers(selectedUsers.filter(su => su.id !== u.id))} className="ml-1 text-xs" aria-label={`Pašalinti narį ${(u.first_name + ' ' + u.last_name)}`}>×</button>
+                {u.name}
+                <button onClick={() => setSelectedUsers(selectedUsers.filter(su => su.id !== u.id))} className="ml-1 text-xs" aria-label={`Pašalinti narį ${u.name}`}>×</button>
               </span>
             ))}
           </div>
@@ -104,12 +88,12 @@ const AddMemberModal = ({ chatId, onClose, onAdded, existingMembers = [] }) => {
               className="flex items-center gap-2 px-2 py-1 hover:bg-blue-100 dark:hover:bg-slate-700 rounded cursor-pointer"
               onClick={() => setSelectedUsers([...selectedUsers, u])}
               tabIndex={0}
-              aria-label={`Pridėti narį ${(u.first_name + ' ' + u.last_name)}`}
+              aria-label={`Pridėti narį ${u.name}`}
             >
               <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">
-                {(u.first_name[0] || '').toUpperCase()}{(u.last_name[0] || '').toUpperCase()}
+                {u.name[0].toUpperCase()}
               </span>
-              <span className="text-gray-900 dark:text-white">{u.first_name + ' ' + u.last_name}</span>
+              <span className="text-gray-900 dark:text-white">{u.name}</span>
             </div>
           ))}
         </div>

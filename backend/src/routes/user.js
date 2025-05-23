@@ -7,7 +7,7 @@ const pool = require('../config/database');
 router.get('/', auth, async (req, res) => {
   try {
     const [users] = await pool.query(
-      'SELECT id, first_name, last_name, email FROM users WHERE id != ?',
+      'SELECT id, name, email FROM users WHERE id != ?',
       [req.user.id]
     );
     res.json(users);

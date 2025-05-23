@@ -4,91 +4,35 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const auth = require('../middleware/auth');
-const { sendVerificationEmail } = require('./emailVerification');
-
-// Laikinai saugome verifikacijos kodus (gali būti pakeista į duomenų bazę)
-const verificationCodes = new Map();
 
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    const { name, email, password } = req.body;
 
     // Check if user already exists
     const [existingUsers] = await pool.query(
-      'SELECT * FROM users WHERE email = ? OR (first_name = ? AND last_name = ?)',
-      [email, firstName, lastName]
+      'SELECT * FROM users WHERE email = ?',
+      [email]
     );
 
     if (existingUsers.length > 0) {
-      if (existingUsers[0].email === email) {
-        return res.status(400).json({ message: 'Vartotojas su tokiu el. paštu jau egzistuoja' });
-      } else {
-        return res.status(400).json({ message: 'Vartotojas su tokiu vardu ir pavarde jau egzistuoja' });
-      }
+      return res.status(400).json({ message: 'User already exists' });
     }
 
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Siunčiame verifikacijos email
-    const verificationCode = await sendVerificationEmail(email);
-    
-    // Išsaugome verifikacijos kodą (laikinai)
-    verificationCodes.set(email, {
-      code: verificationCode,
-      password: hashedPassword,
-      firstName: firstName,
-      lastName: lastName,
-      timestamp: Date.now()
-    });
-
-    res.status(200).json({ message: 'Verifikacijos kodas išsiųstas į jūsų email' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Verifikacijos endpoint'as
-router.post('/verify', async (req, res) => {
-  try {
-    const { email, code } = req.body;
-    const userData = verificationCodes.get(email);
-
-    if (!userData) {
-      return res.status(400).json({ message: 'Neteisingas email arba kodas' });
-    }
-
-    // Tikriname ar kodas teisingas
-    if (userData.code !== code) {
-      return res.status(400).json({ message: 'Neteisingas verifikacijos kodas' });
-    }
-
-    // Tikriname ar kodas dar galioja (15 minučių)
-    if (Date.now() - userData.timestamp > 15 * 60 * 1000) {
-      verificationCodes.delete(email);
-      return res.status(400).json({ message: 'Verifikacijos kodas nebegalioja' });
-    }
-
     // Create new user
     const [result] = await pool.query(
-      'INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)',
-      [userData.firstName, userData.lastName, email, userData.password]
+      'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
+      [name, email, hashedPassword]
     );
-
-    // Išvalome laikiną verifikacijos duomenis
-    verificationCodes.delete(email);
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        id: result.insertId, 
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email 
-      },
+      { id: result.insertId, name, email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -97,59 +41,26 @@ router.post('/verify', async (req, res) => {
       token,
       user: {
         id: result.insertId,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
+        name,
         email
       }
     });
   } catch (error) {
-    console.error('Verifikacijos klaida:', error);
+    console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Send login verification code
-router.post('/send-login-code', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Check if user exists
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
-    );
-
-    if (users.length === 0) {
-      return res.status(400).json({ message: 'Neteisingas el. paštas arba slaptažodis' });
-    }
-
-    const user = users[0];
-    const bcrypt = require('bcryptjs');
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(400).json({ message: 'Neteisingas el. paštas arba slaptažodis' });
-    }
-
-    // Send verification code
-    const verificationCode = await sendVerificationEmail(email);
-    
-    // Store verification code temporarily
-    verificationCodes.set(email, {
-      code: verificationCode,
-      timestamp: Date.now()
-    });
-
-    res.status(200).json({ message: 'Verifikacijos kodas išsiųstas į jūsų email' });
-  } catch (error) {
-    console.error('Error sending login code:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Login with verification code
+// Login user
 router.post('/login', async (req, res) => {
   try {
-    const { email, code } = req.body;
+    console.log('Login request received:', req.body);
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      console.log('Missing email or password');
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     // Check if user exists
     const [users] = await pool.query(
@@ -157,39 +68,30 @@ router.post('/login', async (req, res) => {
       [email]
     );
 
+    console.log('User found:', users.length > 0);
+
     if (users.length === 0) {
-      return res.status(400).json({ message: 'Vartotojas su tokiu el. paštu nerastas' });
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     const user = users[0];
-    const userData = verificationCodes.get(email);
 
-    if (!userData) {
-      return res.status(400).json({ message: 'Neteisingas email arba kodas' });
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match:', isMatch);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Check if code is correct
-    if (userData.code !== code) {
-      return res.status(400).json({ message: 'Neteisingas verifikacijos kodas' });
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not set');
+      return res.status(500).json({ message: 'Server configuration error' });
     }
-
-    // Check if code is still valid (15 minutes)
-    if (Date.now() - userData.timestamp > 15 * 60 * 1000) {
-      verificationCodes.delete(email);
-      return res.status(400).json({ message: 'Verifikacijos kodas nebegalioja' });
-    }
-
-    // Clear verification data
-    verificationCodes.delete(email);
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        id: user.id, 
-        firstName: user.first_name,
-        lastName: user.last_name,
-        email: user.email 
-      },
+      { id: user.id, name: user.name, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -198,8 +100,7 @@ router.post('/login', async (req, res) => {
       token,
       user: {
         id: user.id,
-        firstName: user.first_name,
-        lastName: user.last_name,
+        name: user.name,
         email: user.email
       }
     });
@@ -213,7 +114,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', auth, async (req, res) => {
   try {
     const [users] = await pool.query(
-      'SELECT id, first_name, last_name, email FROM users WHERE id = ?',
+      'SELECT id, name, email FROM users WHERE id = ?',
       [req.user.id]
     );
 
@@ -224,52 +125,6 @@ router.get('/me', auth, async (req, res) => {
     res.json({ user: users[0] });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Pamiršau slaptažodį: siunčia kodą
-router.post('/forgot-password', async (req, res) => {
-  try {
-    const { email } = req.body;
-    const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (users.length === 0) {
-      return res.status(400).json({ message: 'Vartotojas su tokiu el. paštu nerastas' });
-    }
-    const verificationCode = await sendVerificationEmail(email);
-    verificationCodes.set(email, {
-      code: verificationCode,
-      timestamp: Date.now()
-    });
-    res.status(200).json({ message: 'Atstatymo kodas išsiųstas į jūsų el. paštą' });
-  } catch (error) {
-    console.error('Error sending forgot password code:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Atstatyti slaptažodį: tikrina kodą ir keičia slaptažodį
-router.post('/reset-password', async (req, res) => {
-  try {
-    const { email, code, newPassword } = req.body;
-    const userData = verificationCodes.get(email);
-    if (!userData) {
-      return res.status(400).json({ message: 'Neteisingas el. paštas arba kodas' });
-    }
-    if (userData.code !== code) {
-      return res.status(400).json({ message: 'Neteisingas kodas' });
-    }
-    if (Date.now() - userData.timestamp > 15 * 60 * 1000) {
-      verificationCodes.delete(email);
-      return res.status(400).json({ message: 'Kodas nebegalioja' });
-    }
-    const bcrypt = require('bcryptjs');
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await pool.query('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, email]);
-    verificationCodes.delete(email);
-    res.status(200).json({ message: 'Slaptažodis sėkmingai atnaujintas' });
-  } catch (error) {
-    console.error('Error resetting password:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

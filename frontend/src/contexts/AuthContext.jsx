@@ -63,33 +63,9 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = async (email, code) => {
+  const login = async (email, password) => {
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, code }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setUser(data.user);
-        localStorage.setItem('token', data.token);
-        return { success: true };
-      } else {
-        return { success: false, error: data.message || 'Prisijungimas nepavyko' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Tinklo klaida' };
-    }
-  };
-
-  const sendLoginCode = async (email, password) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/send-login-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,12 +76,14 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
+        setUser(data.user);
+        localStorage.setItem('token', data.token);
         return { success: true };
       } else {
-        return { success: false, error: data.message || 'Nepavyko išsiųsti kodo' };
+        return { success: false, error: data.message || 'Login failed' };
       }
     } catch (error) {
-      return { success: false, error: 'Tinklo klaida' };
+      return { success: false, error: 'Network error' };
     }
   };
 
@@ -116,34 +94,7 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          firstName: name.firstName,
-          lastName: name.lastName,
-          email, 
-          password 
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return { success: true };
-      } else {
-        return { success: false, error: data.message || 'Registracija nepavyko' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Tinklo klaida' };
-    }
-  };
-
-  const verifyEmail = async (email, code) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await response.json();
@@ -153,10 +104,10 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', data.token);
         return { success: true };
       } else {
-        return { success: false, error: data.message || 'Verifikacija nepavyko' };
+        return { success: false, error: data.message || 'Registration failed' };
       }
     } catch (error) {
-      return { success: false, error: 'Tinklo klaida' };
+      return { success: false, error: 'Network error' };
     }
   };
 
@@ -165,44 +116,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
-  const forgotPassword = async (email) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        return { success: true };
-      } else {
-        return { success: false, error: data.message || 'Nepavyko išsiųsti kodo' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Tinklo klaida' };
-    }
-  };
-
-  const resetPassword = async (email, code, newPassword) => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, newPassword }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        return { success: true };
-      } else {
-        return { success: false, error: data.message || 'Nepavyko atnaujinti slaptažodžio' };
-      }
-    } catch (error) {
-      return { success: false, error: 'Tinklo klaida' };
-    }
-  };
-
   return (
-    <AuthContext.Provider value={{ user, login, register, verifyEmail, sendLoginCode, logout, loading, forgotPassword, resetPassword }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

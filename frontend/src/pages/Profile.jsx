@@ -7,8 +7,7 @@ import axios from 'axios';
 
 const Profile = () => {
   const { user, logout } = useAuth();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -19,8 +18,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      setFirstName(user.first_name || '');
-      setLastName(user.last_name || '');
+      setName(user.name);
       setEmail(user.email);
     }
   }, [user]);
@@ -35,8 +33,7 @@ const Profile = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
+          name,
           email,
           password: password || undefined
         })
@@ -44,13 +41,13 @@ const Profile = () => {
 
       const data = await response.json();
       if (response.ok) {
-        setMessage('Profilis sėkmingai atnaujintas');
+        setMessage('Profile updated successfully');
         setPassword('');
       } else {
-        setMessage(data.error || 'Nepavyko atnaujinti profilio');
+        setMessage(data.error || 'Failed to update profile');
       }
     } catch (error) {
-      setMessage('Nepavyko atnaujinti profilio');
+      setMessage('Failed to update profile');
     }
   };
 
@@ -58,7 +55,7 @@ const Profile = () => {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
-      toast.error('Nauji slaptažodžiai nesutampa');
+      toast.error('New passwords do not match');
       return;
     }
 
@@ -69,12 +66,12 @@ const Profile = () => {
         currentPassword,
         newPassword
       });
-      toast.success('Slaptažodis sėkmingai pakeistas');
+      toast.success('Password changed successfully');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Nepavyko pakeisti slaptažodžio');
+      toast.error(error.response?.data?.message || 'Failed to change password');
     } finally {
       setLoading(false);
     }
@@ -91,7 +88,7 @@ const Profile = () => {
         {/* Profile Information */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            Profilio informacija
+            Profile Information
           </h2>
           {message && (
             <div className={`p-2 mb-4 rounded ${
@@ -102,34 +99,21 @@ const Profile = () => {
           )}
           <form onSubmit={handleUpdate} className="space-y-4">
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Vardas
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Name
               </label>
               <input
                 type="text"
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Pavardė
-              </label>
-              <input
-                type="text"
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
                 required
               />
             </div>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                El. paštas
+                Email
               </label>
               <input
                 type="email"
@@ -141,7 +125,7 @@ const Profile = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Naujas slaptažodis (palikite tuščią, jei norite išlaikyti dabartinį)</label>
+              <label className="block text-sm font-medium text-gray-700">New Password (leave blank to keep current)</label>
               <input
                 type="password"
                 value={password}
@@ -155,7 +139,7 @@ const Profile = () => {
                 disabled={loading}
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Atnaujinama...' : 'Atnaujinti profilį'}
+                {loading ? 'Updating...' : 'Update Profile'}
               </button>
             </div>
           </form>
@@ -164,12 +148,12 @@ const Profile = () => {
         {/* Change Password */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            Keisti slaptažodį
+            Change Password
           </h2>
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div>
               <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Dabartinis slaptažodis
+                Current Password
               </label>
               <input
                 type="password"
@@ -181,7 +165,7 @@ const Profile = () => {
             </div>
             <div>
               <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Naujas slaptažodis
+                New Password
               </label>
               <input
                 type="password"
@@ -193,7 +177,7 @@ const Profile = () => {
             </div>
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Pakartokite naują slaptažodį
+                Confirm New Password
               </label>
               <input
                 type="password"
@@ -209,7 +193,7 @@ const Profile = () => {
                 disabled={loading}
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Keičiama...' : 'Keisti slaptažodį'}
+                {loading ? 'Changing...' : 'Change Password'}
               </button>
             </div>
           </form>
@@ -221,7 +205,7 @@ const Profile = () => {
             onClick={logout}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
-            Atsijungti
+            Logout
           </button>
         </div>
       </motion.div>

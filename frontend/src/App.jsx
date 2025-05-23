@@ -6,7 +6,6 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
-import ForgotPassword from './pages/ForgotPassword';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -62,7 +61,6 @@ function App() {
               <Register />
             </PublicRoute>
           } />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route
             path="/"
             element={
