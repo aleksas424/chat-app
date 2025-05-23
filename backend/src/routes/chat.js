@@ -13,7 +13,7 @@ router.get('/', auth, async (req, res) => {
     const [privateChats] = await pool.query(`
       SELECT c.id, c.type, c.name, c.created_at,
              CASE 
-               WHEN c.type = 'private' THEN u.name
+               WHEN c.type = 'private' THEN CONCAT(u.first_name, ' ', u.last_name)
                ELSE c.name
              END as display_name
       FROM chats c
@@ -51,7 +51,7 @@ router.get('/:chatId/messages', auth, async (req, res) => {
 
     // Get messages
     const [messages] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.chat_id = ?
@@ -132,14 +132,14 @@ router.post('/:chatId/messages', auth, async (req, res) => {
 
     // Get the full message with sender info
     const [rows] = await pool.query(
-      `SELECT m.*, u.name as sender_name FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.id = ?`,
+      `SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.id = ?`,
       [result.insertId]
     );
-    const newMessage = rows[0];
+    const newMessage = rows && rows.length > 0 ? rows[0] : null;
 
     // Emit socket event to all clients (optionally, only to chat members)
     const io = req.app.get('io');
-    if (io) {
+    if (io && newMessage) {
       io.emit('new-message', {
         id: newMessage.id,
         chatId: newMessage.chat_id,
@@ -150,13 +150,7 @@ router.post('/:chatId/messages', auth, async (req, res) => {
       });
     }
 
-    res.status(201).json({
-      messageId: result.insertId,
-      chatId,
-      content,
-      senderId: userId,
-      createdAt: new Date()
-    });
+    res.status(201).json(newMessage);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -199,7 +193,7 @@ router.delete('/:chatId', auth, async (req, res) => {
 router.get('/messages', async (req, res) => {
   try {
     const [messages] = await pool.query(`
-      SELECT m.*, u.name as user_name 
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as user_name 
       FROM messages m 
       JOIN users u ON m.sender_id = u.id 
       ORDER BY m.created_at DESC 
@@ -313,30 +307,19 @@ router.patch('/:chatId/messages/:messageId', auth, async (req, res) => {
 
     // Update the message
     await pool.query(
-      'UPDATE messages SET content = ?, edited = true WHERE id = ?',
+      'UPDATE messages SET content = ?, is_edited = true, edited_at = NOW() WHERE id = ?',
       [content, messageId]
     );
 
     // Get the updated message
     const [updatedMessage] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.id = ?
     `, [messageId]);
 
-    // Emit socket event
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('message-edited', {
-        messageId: Number(messageId),
-        chatId: Number(chatId),
-        content,
-        edited: true
-      });
-    }
-
-    res.json(updatedMessage[0]);
+    res.json(updatedMessage && updatedMessage.length > 0 ? updatedMessage[0] : null);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -411,7 +394,7 @@ router.get('/:chatId/messages/search', auth, async (req, res) => {
 
     // Search messages
     const [messages] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.chat_id = ? AND m.content LIKE ?
@@ -479,11 +462,11 @@ router.post('/:chatId/messages/file', auth, async (req, res) => {
       JOIN users u ON m.sender_id = u.id
       WHERE m.id = ?
     `, [result.insertId]);
-    const newMessage = rows[0];
+    const newMessage = rows && rows.length > 0 ? rows[0] : null;
 
     // Emit socket event
     const io = req.app.get('io');
-    if (io) {
+    if (io && newMessage) {
       io.emit('new-message', {
         id: newMessage.id,
         chatId: newMessage.chat_id,
@@ -537,7 +520,7 @@ router.post('/status', auth, async (req, res) => {
 router.get('/statuses', auth, async (req, res) => {
   try {
     const [users] = await pool.query(`
-      SELECT id, name, status, last_seen
+      SELECT id, CONCAT(first_name, ' ', last_name) as name, status, last_seen
       FROM users
       WHERE id IN (
         SELECT DISTINCT user_id
@@ -622,7 +605,7 @@ router.get('/:chatId/messages/:messageId/reads', auth, async (req, res) => {
 
     // Get read status
     const [reads] = await pool.query(`
-      SELECT mr.*, u.name as user_name
+      SELECT mr.*, CONCAT(u.first_name, ' ', u.last_name) as user_name
       FROM message_reads mr
       JOIN users u ON mr.user_id = u.id
       WHERE mr.message_id = ?
@@ -727,7 +710,7 @@ router.post('/:chatId/messages/:messageId/pin', auth, async (req, res) => {
 
     // Get the pinned message
     const [pinnedMessage] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.id = ?
@@ -742,7 +725,7 @@ router.post('/:chatId/messages/:messageId/pin', auth, async (req, res) => {
       });
     }
 
-    res.json(pinnedMessage[0]);
+    res.json(pinnedMessage && pinnedMessage.length > 0 ? pinnedMessage[0] : null);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -810,13 +793,13 @@ router.get('/:chatId/pinned-message', auth, async (req, res) => {
 
     // Get pinned message
     const [pinnedMessage] = await pool.query(`
-      SELECT m.*, u.name as sender_name
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.chat_id = ? AND m.pinned = true
     `, [chatId]);
 
-    res.json(pinnedMessage[0] || null);
+    res.json(pinnedMessage && pinnedMessage.length > 0 ? pinnedMessage[0] : null);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

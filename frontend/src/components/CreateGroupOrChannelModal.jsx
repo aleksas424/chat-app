@@ -4,7 +4,6 @@ import { API_URL } from '../config';
 
 const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [admins, setAdmins] = useState([]);
@@ -27,9 +26,9 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
     fetchUsers();
   }, []);
 
-  const toggleUser = (id) => {
-    setSelectedUsers(sel => sel.includes(id) ? sel.filter(i => i !== id) : [...sel, id]);
-    if (!selectedUsers.includes(id)) setAdmins(admins => admins.filter(a => a !== id));
+  const toggleUser = (user) => {
+    setSelectedUsers(sel => sel.some(u => u.id === user.id) ? sel.filter(i => i.id !== user.id) : [...sel, user]);
+    if (!selectedUsers.some(u => u.id === user.id)) setAdmins(admins => admins.filter(a => a !== user.id));
   };
   const toggleAdmin = (id) => {
     setAdmins(adm => adm.includes(id) ? adm.filter(i => i !== id) : [...adm, id]);
@@ -51,7 +50,7 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
       const endpoint = '/api/group';
       const res = await axios.post(
         `${API_URL}${endpoint}`,
-        { name, type, description, members: selectedUsers.map(u => u.id), admins },
+        { name, type, members: selectedUsers.map(u => u.id), admins },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       onCreated && onCreated(res.data);
@@ -64,7 +63,7 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
   };
 
   const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) &&
+    (u.first_name + ' ' + u.last_name).toLowerCase().includes(search.toLowerCase()) &&
     !selectedUsers.some(su => su.id === u.id)
   );
 
@@ -89,14 +88,6 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
           onChange={e => setName(e.target.value)}
           aria-label="Pavadinimas"
         />
-        <textarea
-          className="w-full mb-3 px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="Aprašymas (nebūtina)"
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          rows={2}
-          aria-label="Aprašymas"
-        />
         <input
           type="text"
           className="w-full mb-2 px-4 py-2 rounded bg-white/60 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -110,14 +101,14 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
             <div
               key={u.id}
               className="flex items-center gap-2 px-2 py-1 hover:bg-blue-100 dark:hover:bg-slate-700 rounded cursor-pointer"
-              onClick={() => setSelectedUsers([...selectedUsers, u])}
+              onClick={() => toggleUser(u)}
               tabIndex={0}
-              aria-label={`Pridėti narį ${u.name}`}
+              aria-label={`Pridėti narį ${(u.first_name + ' ' + u.last_name)}`}
             >
               <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary-400 text-white font-bold">
-                {u.name[0].toUpperCase()}
+                {(u.first_name[0] || '').toUpperCase()}{(u.last_name[0] || '').toUpperCase()}
               </span>
-              <span className="text-gray-900 dark:text-white">{u.name}</span>
+              <span className="text-gray-900 dark:text-white">{u.first_name + ' ' + u.last_name}</span>
             </div>
           ))}
         </div>
@@ -125,17 +116,17 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
           <div className="flex flex-col gap-2 mb-2">
             {selectedUsers.map(u => (
               <div key={u.id} className="flex items-center gap-2 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded-full px-2 py-1 text-xs">
-                {u.name}
-                <button onClick={() => setSelectedUsers(selectedUsers.filter(su => su.id !== u.id))} className="ml-1 text-xs" aria-label={`Pašalinti narį ${u.name}`}>×</button>
+                {u.first_name + ' ' + u.last_name}
+                <button onClick={() => setSelectedUsers(selectedUsers.filter(su => su.id !== u.id))} className="ml-1 text-xs" aria-label={`Pašalinti narį ${(u.first_name + ' ' + u.last_name)}`}>×</button>
                 <label className="flex items-center gap-1 ml-2">
                   <input
                     type="checkbox"
                     checked={admins.includes(u.id)}
                     onChange={() => toggleAdmin(u.id)}
                     className="accent-blue-600"
-                    aria-label={`Padaryti adminu: ${u.name}`}
+                    aria-label={`Padaryti adminu: ${(u.first_name + ' ' + u.last_name)}`}
                   />
-                  <span>Admin</span>
+                  <span>Administratorius</span>
                 </label>
               </div>
             ))}
@@ -161,4 +152,4 @@ const CreateGroupOrChannelModal = ({ type, onClose, onCreated }) => {
   );
 };
 
-export default CreateGroupOrChannelModal; 
+export default CreateGroupOrChannelModal;

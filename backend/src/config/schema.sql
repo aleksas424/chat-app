@@ -4,7 +4,8 @@
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    first_name VARCHAR(15) NOT NULL,
+    last_name VARCHAR(15) NOT NULL,
     email VARCHAR(191) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     status ENUM('online', 'away', 'offline') DEFAULT 'offline',
