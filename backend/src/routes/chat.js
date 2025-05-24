@@ -3,6 +3,9 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/database');
 const path = require('path');
+const axios = require('axios')
+const fs = require('fs');
+const FormData = require('form-data');
 
 // Get all chats for a user
 router.get('/', auth, async (req, res) => {
@@ -175,10 +178,10 @@ router.delete('/:chatId', auth, async (req, res) => {
 
     // Delete chat messages
     await pool.query('DELETE FROM messages WHERE chat_id = ?', [chatId]);
-    
+
     // Delete chat members
     await pool.query('DELETE FROM chat_members WHERE chat_id = ?', [chatId]);
-    
+
     // Delete chat
     await pool.query('DELETE FROM chats WHERE id = ?', [chatId]);
 
@@ -199,7 +202,7 @@ router.get('/messages', async (req, res) => {
       ORDER BY m.created_at DESC 
       LIMIT 50
     `);
-    
+
     const formattedMessages = messages.map(msg => ({
       id: msg.id,
       text: msg.content,
@@ -414,7 +417,8 @@ router.post('/:chatId/messages/file', auth, async (req, res) => {
   try {
     const { chatId } = req.params;
     const userId = req.user.id;
-    const { file } = req.files;
+
+    const file = req.files?.file; // <-- this is correct for express-fileupload
 
     // Verify user is a member of the chat
     const [members] = await pool.query(
@@ -436,23 +440,48 @@ router.post('/:chatId/messages/file', auth, async (req, res) => {
       return res.status(400).json({ message: 'File size too large (max 10MB)' });
     }
 
+    console.log('File uploaded:', file.name, 'Size:', file.size, 'Type:', file.mimetype);
+
     // Check file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!allowedTypes.includes(file.mimetype)) {
       return res.status(400).json({ message: 'File type not allowed' });
     }
 
     // Generate unique filename
     const uniqueFilename = `${Date.now()}-${file.name}`;
-    const uploadPath = path.join(__dirname, '../../uploads', uniqueFilename);
+    //const uploadPath = path.join(__dirname, '../../uploads', uniqueFilename);
 
     // Save file
-    await file.mv(uploadPath);
+    //await file.mv(uploadPath);
+
+    const formData = new FormData();
+    formData.append('file', file.data, {
+      filename: file.name,
+      contentType: file.mimetype,
+      knownLength: file.size
+    });
+
+    const responseApi = await axios.post('https://api.fivemerr.com/v1/media/images',
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          'Authorization': 'fe4b24520b9211b2bbbf1900a892f040'
+        }
+      }
+    )
+
+    if (responseApi.status !== 200) {
+      return res.status(500).json({ message: 'Failed to upload file' });
+    }
+
+    const fileUploadedUrl = responseApi.data.url;
 
     // Insert message with file info
     const [result] = await pool.query(
       'INSERT INTO messages (chat_id, sender_id, content, file_name, file_path, file_type) VALUES (?, ?, ?, ?, ?, ?)',
-      [chatId, userId, file.name, file.name, uniqueFilename, file.mimetype]
+      [chatId, userId, file.name, file.name, fileUploadedUrl, file.mimetype]
     );
 
     // Get the full message with sender info

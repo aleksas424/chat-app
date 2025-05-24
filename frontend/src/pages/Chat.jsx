@@ -490,14 +490,16 @@ const Chat = () => {
     setUploadingFile(true);
     try {
       const formData = new FormData();
+      console.log('Uploading file:', file);
       formData.append('file', file);
+      console.log('Form data prepared:', formData);
       const response = await axios.post(
         `${API_URL}/api/chat/${selectedChat.id}/messages/file`,
         formData,
         {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'multipart/form-data'
+            //'Content-Type': 'multipart/form-data'
           }
         }
       );
@@ -1157,6 +1159,7 @@ const Chat = () => {
                   type="file"
                   style={{ display: 'none' }}
                   id="file-upload"
+                  accept="image/*"
                   onChange={e => {
                     if (e.target.files && e.target.files[0]) {
                       handleFileUpload(e.target.files[0]);
