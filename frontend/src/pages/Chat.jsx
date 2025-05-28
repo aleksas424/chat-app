@@ -368,9 +368,9 @@ const Chat = () => {
     if (!socket) return;
 
     const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map msg =>
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content, edited } : msg
-      );
+      ));
       setEditingMessage(null);
       setEditContent('');
     };
@@ -392,9 +392,9 @@ const Chat = () => {
     if (!newContent.trim()) return;
 
     // Optimistinis atnaujinimas - iškart atnaujinti UI
-    setMessages(prev => prev.map msg =>
+    setMessages(prev => prev.map(msg =>
       msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
-    );
+    ));
 
     try {
       const response = await axios.patch(
@@ -404,9 +404,9 @@ const Chat = () => {
       );
 
       // Jei sėkminga, atnaujinti su serverio duomenimis
-      setMessages(prev => prev.map msg =>
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
-      );
+      ));
 
       // Uždaryti redagavimo režimą
       setEditingMessage(null);
@@ -415,9 +415,9 @@ const Chat = () => {
       toast.success('Žinutė atnaujinta');
     } catch (error) {
       // Jei klaida, grąžinti seną žinutę
-      setMessages(prev => prev.map msg =>
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content: msg.content } : msg
-      );
+      ));
 
       if (error.response) {
         if (error.response.status === 403) {
@@ -1037,7 +1037,7 @@ const Chat = () => {
                       <span className="text-xs text-blue-600 dark:text-blue-300">{chat.type}</span>
                     </div>
                     <div className="text-xs md:text-sm text-gray-500 dark:text-gray-300 truncate">
-                      {chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}
+                      {chat.lastMessage ? `${(chat.lastMessage.senderName || '').split(' ')[0]}: ${chat.lastMessage.content}` : 'No messages yet'}
                     </div>
                   </div>
                 </motion.div>
