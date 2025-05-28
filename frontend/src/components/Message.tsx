@@ -82,8 +82,8 @@ export const Message: React.FC<MessageProps> = ({ message, chatId, onMessageUpda
         </div>
         
         <span className="text-xs text-gray-500 mt-1">
-          {isOwnMessage ? 'Wysłano' : 'Otrzymano'}: {format(new Date(message.createdAt), 'dd.MM.yyyy HH:mm')}
-          {message.updatedAt !== message.createdAt && ' (edytowano)'}
+          {format(new Date(message.createdAt), 'HH:mm')}
+          {message.updatedAt !== message.createdAt && ' (edited)'}
         </span>
       </div>
     </div>
