@@ -377,6 +377,7 @@ const Chat = () => {
 
     const handleMessageDeleted = ({ messageId }) => {
       setMessages(prev => prev.filter msg => msg.id !== messageId);
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
     };
 
     socket.on('message-edited', handleMessageEdited);
