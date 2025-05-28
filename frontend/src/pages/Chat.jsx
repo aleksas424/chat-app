@@ -368,15 +368,15 @@ const Chat = () => {
     if (!socket) return;
 
     const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map(msg =>
+      setMessages(prev => prev.map msg =>
         msg.id === messageId ? { ...msg, content, edited } : msg
-      ));
+      );
       setEditingMessage(null);
       setEditContent('');
     };
 
     const handleMessageDeleted = ({ messageId }) => {
-      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      setMessages(prev => prev.filter msg => msg.id !== messageId);
     };
 
     socket.on('message-edited', handleMessageEdited);
@@ -392,9 +392,9 @@ const Chat = () => {
     if (!newContent.trim()) return;
 
     // Optimistinis atnaujinimas - iškart atnaujinti UI
-    setMessages(prev => prev.map(msg =>
+    setMessages(prev => prev.map msg =>
       msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
-    ));
+    );
 
     try {
       const response = await axios.patch(
@@ -404,9 +404,9 @@ const Chat = () => {
       );
 
       // Jei sėkminga, atnaujinti su serverio duomenimis
-      setMessages(prev => prev.map(msg =>
+      setMessages(prev => prev.map msg =>
         msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
-      ));
+      );
 
       // Uždaryti redagavimo režimą
       setEditingMessage(null);
@@ -415,9 +415,9 @@ const Chat = () => {
       toast.success('Žinutė atnaujinta');
     } catch (error) {
       // Jei klaida, grąžinti seną žinutę
-      setMessages(prev => prev.map(msg =>
+      setMessages(prev => prev.map msg =>
         msg.id === messageId ? { ...msg, content: msg.content } : msg
-      ));
+      );
 
       if (error.response) {
         if (error.response.status === 403) {
@@ -902,7 +902,10 @@ const Chat = () => {
           {/* Siuntėjas ir laikas */}
           {!isOwner && (
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">{message.sender_name}</span>
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                {/* Tik pirmas vardas */}
+                {message.sender_name?.split(' ')[0]}
+              </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">{messageTime}</span>
             </div>
           )}
