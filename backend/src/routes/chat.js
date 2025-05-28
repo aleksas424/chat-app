@@ -486,10 +486,10 @@ router.post('/:chatId/messages/file', auth, async (req, res) => {
 
     // Get the full message with sender info
     const [rows] = await pool.query(`
-      SELECT m.*, u.name as sender_name
-      FROM messages m
-      JOIN users u ON m.sender_id = u.id
-      WHERE m.id = ?
+      SELECT m.*, CONCAT(u.first_name, ' ', u.last_name) as sender_name
+  FROM messages m
+  JOIN users u ON m.sender_id = u.id
+  WHERE m.id = ?
     `, [result.insertId]);
     const newMessage = rows && rows.length > 0 ? rows[0] : null;
 
