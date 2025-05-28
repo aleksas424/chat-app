@@ -368,9 +368,9 @@ const Chat = () => {
     if (!socket) return;
 
     const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map msg =>
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content, edited } : msg
-      );
+      ));
       setEditingMessage(null);
       setEditContent('');
     };
@@ -953,6 +953,7 @@ const Chat = () => {
                   className="w-full h-auto max-w-xs max-h-64 rounded-lg mb-2 object-contain"
                   style={{ display: 'block' }}
                 />
+                {/* Atsisiųsti mygtukas tik jei yra paveikslėlis */}
                 <button
                   onClick={handleDownload}
                   className="px-3 py-1 rounded bg-blue-500 text-white text-xs hover:bg-blue-700 transition"
