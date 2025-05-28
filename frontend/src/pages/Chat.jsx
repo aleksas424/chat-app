@@ -368,9 +368,9 @@ const Chat = () => {
     if (!socket) return;
 
     const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map(msg =>
+      setMessages(prev => prev.map msg =>
         msg.id === messageId ? { ...msg, content, edited } : msg
-      ));
+      );
       setEditingMessage(null);
       setEditContent('');
     };
