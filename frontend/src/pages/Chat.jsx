@@ -866,11 +866,21 @@ const Chat = () => {
   };
 
   const renderMessage = (message) => {
-    console.log('Rendering message:', message);
     const isOwner = message.sender_id === user?.id;
     const messageTime = message.created_at
       ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : '';
+
+    // Failo atsisiuntimo funkcija
+    const handleDownload = () => {
+      if (!message.file_path) return;
+      const link = document.createElement('a');
+      link.href = message.file_path;
+      link.download = message.file_name || 'file';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
 
     return (
       <div key={message.id} className={`flex ${isOwner ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -882,38 +892,63 @@ const Chat = () => {
             }`}
           style={{ minWidth: 120 }}
         >
-          {/* Sender name and time */}
+          {/* Siuntėjas ir laikas */}
           {!isOwner && (
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">{message.sender_name}</span>
               <span className="text-xs text-gray-500 dark:text-gray-400">{messageTime}</span>
             </div>
           )}
-          {/* Message content */}
+          {/* Žinutės turinys */}
           <div className="text-base md:text-lg font-medium whitespace-pre-line">
             {message.file_path ? (
-              <>
+              <div className="flex flex-col items-start gap-2">
                 <img
                   src={message.file_path}
                   alt={message.file_name || 'image'}
                   className="w-full h-auto max-w-xs max-h-64 rounded-lg mb-2 object-contain"
                   style={{ display: 'block' }}
                 />
+                {/* Atsisiųsti mygtukas tik jei yra paveikslėlis */}
+                <button
+                  onClick={handleDownload}
+                  className="px-3 py-1 rounded bg-blue-500 text-white text-xs hover:bg-blue-700 transition"
+                  title="Atsisiųsti"
+                >
+                  Atsisiųsti
+                </button>
                 {message.content && message.content !== message.file_name && (
                   <div>{message.content}</div>
                 )}
-              </>
+              </div>
             ) : (
               message.content
             )}
           </div>
-          {/* Time for your own messages */}
+          {/* Laikas tavo žinutėms */}
           {isOwner && (
-            <div className="flex justify-end mt-1">
+            <div className="flex justify-end mt-1 gap-2 items-center">
               <span className="text-xs text-gray-200/80 dark:text-gray-300/80">{messageTime}</span>
+              {/* Redaguoti ir Trinti mygtukai tik tavo žinutėms */}
+              <button
+                className="ml-2 px-2 py-1 rounded bg-yellow-400 text-white text-xs hover:bg-yellow-500 transition"
+                onClick={() => {
+                  setEditingMessage(message.id);
+                  setEditContent(message.content);
+                }}
+                title="Redaguoti"
+              >
+                Redaguoti
+              </button>
+              <button
+                className="ml-2 px-2 py-1 rounded bg-red-500 text-white text-xs hover:bg-red-700 transition"
+                onClick={() => handleDeleteMessage(message.id)}
+                title="Ištrinti"
+              >
+                Ištrinti
+              </button>
             </div>
           )}
-          {/* ...rest of your buttons (edit, delete, emoji, etc.) */}
         </div>
       </div>
     );
