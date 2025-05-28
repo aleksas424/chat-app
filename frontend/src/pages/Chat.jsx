@@ -368,15 +368,15 @@ const Chat = () => {
     if (!socket) return;
 
     const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map msg =>
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content, edited } : msg
-      );
+      ));
       setEditingMessage(null);
       setEditContent('');
     };
 
     const handleMessageDeleted = ({ messageId }) => {
-      setMessages(prev => prev.filter msg => msg.id !== messageId);
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
     };
 
     socket.on('message-edited', handleMessageEdited);
@@ -392,9 +392,9 @@ const Chat = () => {
     if (!newContent.trim()) return;
 
     // Optimistinis atnaujinimas - iškart atnaujinti UI
-    setMessages(prev => prev.map msg =>
+    setMessages(prev => prev.map(msg =>
       msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
-    );
+    ));
 
     try {
       const response = await axios.patch(
@@ -404,9 +404,9 @@ const Chat = () => {
       );
 
       // Jei sėkminga, atnaujinti su serverio duomenimis
-      setMessages(prev => prev.map msg =>
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
-      );
+      ));
 
       // Uždaryti redagavimo režimą
       setEditingMessage(null);
@@ -415,9 +415,9 @@ const Chat = () => {
       toast.success('Žinutė atnaujinta');
     } catch (error) {
       // Jei klaida, grąžinti seną žinutę
-      setMessages(prev => prev.map msg =>
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content: msg.content } : msg
-      );
+      ));
 
       if (error.response) {
         if (error.response.status === 403) {
@@ -503,7 +503,8 @@ const Chat = () => {
         `${API_URL}/api/chat/${selectedChat.id}/messages/file`,
         formData,
         {
-          headers: {
+          headers:
+          {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             //'Content-Type': 'multipart/form-data'
           }
@@ -915,6 +916,7 @@ const Chat = () => {
                   className="w-full h-auto max-w-xs max-h-64 rounded-lg mb-2 object-contain"
                   style={{ display: 'block' }}
                 />
+                {/* Atsisiųsti mygtukas tik jei yra paveikslėlis */}
                 <button
                   onClick={handleDownload}
                   className="px-3 py-1 rounded bg-blue-500 text-white text-xs hover:bg-blue-700 transition"
