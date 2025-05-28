@@ -247,7 +247,7 @@ const Chat = () => {
       } else {
         // Show notification for messages in other chats
         const settings = notificationSettings[message.chatId] || { sound: true, desktop: true };
-        
+
         if (settings.desktop && document.hidden) {
           new Notification('New Message', {
             body: `${message.senderName}: ${message.content}`,
@@ -297,7 +297,7 @@ const Chat = () => {
 
   const handleCreatePrivateChat = async (userId) => {
     try {
-      const response = await axios.post(`${API_URL}/api/chat/private`, 
+      const response = await axios.post(`${API_URL}/api/chat/private`,
         { userId },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
@@ -321,12 +321,12 @@ const Chat = () => {
 
   const handleDeleteChat = async () => {
     if (!selectedChat) return;
-    
+
     try {
       await axios.delete(`${API_URL}/api/chat/${selectedChat.id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      
+
       // Remove chat from list
       setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
       setSelectedChat(null);
@@ -362,7 +362,7 @@ const Chat = () => {
     if (!socket) return;
 
     const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map(msg => 
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content, edited } : msg
       ));
       setEditingMessage(null);
@@ -384,35 +384,35 @@ const Chat = () => {
 
   const handleEditMessage = async (messageId, newContent) => {
     if (!newContent.trim()) return;
-    
+
     // Optimistinis atnaujinimas - iškart atnaujinti UI
-    setMessages(prev => prev.map(msg => 
+    setMessages(prev => prev.map(msg =>
       msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
     ));
-    
+
     try {
       const response = await axios.patch(
         `${API_URL}/api/chat/${selectedChat.id}/messages/${messageId}`,
         { content: newContent },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      
+
       // Jei sėkminga, atnaujinti su serverio duomenimis
-      setMessages(prev => prev.map(msg => 
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
       ));
-      
+
       // Uždaryti redagavimo režimą
       setEditingMessage(null);
       setEditContent('');
-      
+
       toast.success('Žinutė atnaujinta');
     } catch (error) {
       // Jei klaida, grąžinti seną žinutę
-      setMessages(prev => prev.map(msg => 
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, content: msg.content } : msg
       ));
-      
+
       if (error.response) {
         if (error.response.status === 403) {
           toast.error('Neturite teisės redaguoti šios žinutės');
@@ -429,7 +429,7 @@ const Chat = () => {
 
   const handleDeleteMessage = async (messageId) => {
     if (!selectedChat) return;
-    
+
     try {
       await axios.delete(
         `${API_URL}/api/group/${selectedChat.id}/messages/${messageId}`,
@@ -449,9 +449,9 @@ const Chat = () => {
 
   const handleDeleteAllMessages = async () => {
     if (!selectedChat) return;
-    
+
     if (!window.confirm('Ar tikrai norite ištrinti visas žinutes?')) return;
-    
+
     try {
       await axios.delete(
         `${API_URL}/api/group/${selectedChat.id}/messages`,
@@ -684,7 +684,7 @@ const Chat = () => {
   useEffect(() => {
     const fetchPinnedMessage = async () => {
       if (!selectedChat) return;
-      
+
       try {
         const response = await axios.get(
           `${API_URL}/api/chat/${selectedChat.id}/pinned-message`,
@@ -842,12 +842,12 @@ const Chat = () => {
   const handleLeaveChat = async () => {
     if (!selectedChat) return;
     if (!window.confirm('Ar tikrai norite palikti šį pokalbį?')) return;
-    
+
     try {
       await axios.delete(`${API_URL}/api/group/${selectedChat.id}/leave`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      
+
       // Remove chat from list
       setChats(prev => prev.filter(chat => chat.id !== selectedChat.id));
       setSelectedChat(null);
@@ -866,6 +866,7 @@ const Chat = () => {
   };
 
   const renderMessage = (message) => {
+    console.log('Rendering message:', message);
     const isOwner = message.sender_id === user?.id;
     // Grupės/kanalo adminas gali trinti bet kurią žinutę, savininkas – visas žinutes, narys – tik savo
     let canDelete = false;
@@ -877,7 +878,7 @@ const Chat = () => {
     const isEditing = editingMessage === message.id;
     return (
       <div key={message.id} className={`flex ${isOwner ? 'justify-end' : 'justify-start'} mb-4`}>
-        <div className={`max-w-[90vw] md:max-w-[70%] ${isOwner ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-2xl p-4 relative shadow-lg break-words transition-all`} style={{minWidth: 120}}>
+        <div className={`max-w-[90vw] md:max-w-[70%] ${isOwner ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-2xl p-4 relative shadow-lg break-words transition-all`} style={{ minWidth: 120 }}>
           {!isOwner && (
             <div className="text-xs text-gray-400 dark:text-gray-300 mb-2 font-semibold tracking-wide">
               {message.sender_name}
@@ -905,7 +906,24 @@ const Chat = () => {
             </form>
           ) : (
             <>
-              <div className="text-base md:text-lg font-medium mb-2 whitespace-pre-line">{message.content}</div>
+              <div className="text-base md:text-lg font-medium mb-2 whitespace-pre-line">
+                {message.file_path ? (
+                  <>
+                    <img
+                      src={message.file_path}
+                      alt={message.file_name || 'image'}
+                      className="w-full h-auto max-w-xs max-h-64 rounded-lg mb-2 object-contain"
+                      style={{ display: 'block' }}
+                    />
+                    {/* Optionally show content as caption if it's not just the filename */}
+                    {message.content && message.content !== message.file_name && (
+                      <div>{message.content}</div>
+                    )}
+                  </>
+                ) : (
+                  message.content
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {canEdit && (
                   <button
@@ -926,7 +944,7 @@ const Chat = () => {
                   }}
                   className={`text-xs px-2 py-1 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-700 transition ${userReaction ? 'ring-2 ring-blue-400' : ''}`}
                   title="Pridėti reakciją"
-                  style={{fontSize: '1.2em'}}
+                  style={{ fontSize: '1.2em' }}
                 >{userReaction ? userReaction.emoji : '😊'}</button>
                 {/* Rodyti emoji reakcijas */}
                 {messageReactions[message.id]?.length > 0 && (
@@ -960,14 +978,22 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-slate-900">
+    <div className="flex h-[84.5vh] bg-gray-100 dark:bg-slate-900">
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen || chats.length === 0 ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
+      // ...existing code...
       {/* Sidebar */}
-      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs bg-white/20 dark:bg-slate-800/80 border-r border-slate-700 shadow-xl backdrop-blur-lg rounded-r-3xl transform transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} md:w-1/4 md:block h-full overflow-hidden`}>
+      <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs 
+        bg-white dark:bg-gray-900 
+        border-r border-gray-300 dark:border-gray-700 
+        shadow-xl backdrop-blur-lg rounded-r-3xl 
+        transform transition-transform duration-200 
+        md:static md:translate-x-0 
+        ${sidebarOpen || chats.length === 0 ? 'translate-x-0' : '-translate-x-full'} 
+        md:w-1/4 md:block h-full overflow-hidden`}>
         <div className="p-4 md:p-6 flex flex-col h-full">
           <div className="flex justify-between items-center mb-4 md:mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow">Pokalbiai</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white drop-shadow">Pokalbiai</h2>
             <button
               className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow hover:from-blue-600 hover:to-indigo-700 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 font-semibold text-sm md:text-base"
               onClick={() => setShowCreateTypeModal(true)}
@@ -980,13 +1006,13 @@ const Chat = () => {
           <input
             type="text"
             placeholder="Ieškoti pokalbių..."
-            className="w-full mb-4 md:mb-6 px-3 py-2 md:px-4 md:py-3 rounded-xl border-none bg-white/40 dark:bg-slate-700/60 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow text-sm md:text-base"
+            className="w-full mb-4 md:mb-6 px-3 py-2 md:px-4 md:py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow text-sm md:text-base"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
           <div className="space-y-2 md:space-y-3 flex-1 min-h-0 overflow-hidden">
             {filteredChats.length === 0 && (
-              <div className="text-slate-400 text-center py-4 md:py-8 text-sm md:text-base">No chats found</div>
+              <div className="text-gray-400 text-center py-4 md:py-8 text-sm md:text-base">No chats found</div>
             )}
             <div className="flex flex-col gap-2 md:gap-3">
               {filteredChats.map(chat => (
@@ -997,7 +1023,7 @@ const Chat = () => {
                   className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-2xl cursor-pointer transition-colors duration-100 shadow-md ${
                     selectedChat?.id === chat.id
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'
-                      : 'bg-white/30 dark:bg-slate-700/60 hover:bg-blue-500/20 dark:hover:bg-blue-700/40 text-slate-900 dark:text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-700 text-gray-900 dark:text-white'
                   }`}
                   onClick={() => handleSelectChat(chat)}
                 >
@@ -1015,9 +1041,9 @@ const Chat = () => {
                       <span className="font-semibold truncate text-sm md:text-base">
                         {chat.display_name}
                       </span>
-                      <span className="text-xs text-blue-200">{chat.type}</span>
+                      <span className="text-xs text-blue-600 dark:text-blue-300">{chat.type}</span>
                     </div>
-                    <div className="text-xs md:text-sm text-blue-100 truncate">
+                    <div className="text-xs md:text-sm text-gray-500 dark:text-gray-300 truncate">
                       {chat.lastMessage ? `${chat.lastMessage.senderName || ''}: ${chat.lastMessage.content}` : 'No messages yet'}
                     </div>
                   </div>
@@ -1032,7 +1058,7 @@ const Chat = () => {
         {selectedChat ? (
           <div className="flex flex-col h-full">
             {/* Chat Header */}
-            <div className="sticky top-0 z-20 p-3 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between" style={{backdropFilter: 'blur(8px)'}}>
+            <div className="sticky top-0 z-20 p-3 md:p-4 border-b border-slate-700/20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between" style={{ backdropFilter: 'blur(8px)' }}>
               <div className="flex items-center gap-2 md:gap-3">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -1137,9 +1163,8 @@ const Chat = () => {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
-                      className={`flex ${
-                        (message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
-                      }`}
+                      className={`flex ${(message.sender_id || message.senderId) === user.id ? 'justify-end' : 'justify-start'
+                        }`}
                     >
                       {renderMessage(message)}
                     </motion.div>
@@ -1190,7 +1215,7 @@ const Chat = () => {
           </div>
         ) : null}
       </div>
-      
+
       {showEmojiPicker && (
         <EmojiPicker
           onSelect={handleAddEmoji}
@@ -1252,8 +1277,8 @@ const Chat = () => {
               {users.filter(u =>
                 (u.first_name + ' ' + u.last_name).toLowerCase().includes(userSearch.toLowerCase())
               ).length === 0 && (
-                <div className="text-gray-400 text-center">Nėra vartotojų</div>
-              )}
+                  <div className="text-gray-400 text-center">Nėra vartotojų</div>
+                )}
             </div>
             <button
               className="mt-2 w-full py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium hover:bg-gray-400 dark:hover:bg-gray-600"
