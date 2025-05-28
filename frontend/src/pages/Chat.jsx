@@ -978,7 +978,7 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-slate-900">
+    <div className="flex h-[84.5vh] bg-gray-100 dark:bg-slate-900">
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen || chats.length === 0 ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       {/* Sidebar */}
