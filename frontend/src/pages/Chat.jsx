@@ -368,9 +368,9 @@ const Chat = () => {
     if (!socket) return;
 
     const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map(msg =>
+      setMessages(prev => prev.map msg =>
         msg.id === messageId ? { ...msg, content, edited } : msg
-      ));
+      );
       setEditingMessage(null);
       setEditContent('');
     };
@@ -911,7 +911,41 @@ const Chat = () => {
           )}
           {/* Žinutės turinys */}
           <div className="text-base md:text-lg font-medium whitespace-pre-line">
-            {message.file_path ? (
+            {editingMessage === message.id ? (
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  handleEditMessage(message.id, editContent);
+                }}
+                className="flex flex-col gap-2"
+              >
+                <textarea
+                  className="w-full p-2 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  value={editContent}
+                  onChange={e => setEditContent(e.target.value)}
+                  rows={2}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="px-3 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700"
+                  >
+                    Išsaugoti
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-1 rounded bg-gray-300 text-gray-800 text-xs hover:bg-gray-400"
+                    onClick={() => {
+                      setEditingMessage(null);
+                      setEditContent('');
+                    }}
+                  >
+                    Atšaukti
+                  </button>
+                </div>
+              </form>
+            ) : message.file_path ? (
               <div className="flex flex-col items-start gap-2">
                 <img
                   src={message.file_path}
@@ -919,7 +953,6 @@ const Chat = () => {
                   className="w-full h-auto max-w-xs max-h-64 rounded-lg mb-2 object-contain"
                   style={{ display: 'block' }}
                 />
-                {/* Atsisiųsti mygtukas tik jei yra paveikslėlis */}
                 <button
                   onClick={handleDownload}
                   className="px-3 py-1 rounded bg-blue-500 text-white text-xs hover:bg-blue-700 transition"
@@ -973,7 +1006,7 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex h-[83vh] bg-gray-100 dark:bg-slate-900">
+    <div className="flex h-[81vh] bg-gray-100 dark:bg-slate-900">
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen || chats.length === 0 ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       {/* Sidebar */}
