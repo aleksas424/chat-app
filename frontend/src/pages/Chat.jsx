@@ -1020,11 +1020,10 @@ const Chat = () => {
                   key={chat.id}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-2xl cursor-pointer transition-colors duration-100 shadow-md ${
-                    selectedChat?.id === chat.id
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-700 text-gray-900 dark:text-white'
-                  }`}
+                  className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-2xl cursor-pointer transition-colors duration-100 shadow-md ${selectedChat?.id === chat.id
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'
+                    : 'bg-white/30 dark:bg-slate-700/60 hover:bg-blue-500/20 dark:hover:bg-blue-700/40 text-slate-900 dark:text-white'
+                    }`}
                   onClick={() => handleSelectChat(chat)}
                 >
                   {/* Avatar */}
