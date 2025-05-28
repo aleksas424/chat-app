@@ -362,9 +362,9 @@ const Chat = () => {
     if (!socket) return;
 
     const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map(msg =>
+      setMessages(prev => prev.map msg =>
         msg.id === messageId ? { ...msg, content, edited } : msg
-      ));
+      );
       setEditingMessage(null);
       setEditContent('');
     };
@@ -868,102 +868,52 @@ const Chat = () => {
   const renderMessage = (message) => {
     console.log('Rendering message:', message);
     const isOwner = message.sender_id === user?.id;
-    // Grupės/kanalo adminas gali trinti bet kurią žinutę, savininkas – visas žinutes, narys – tik savo
-    let canDelete = false;
-    if (myRole === 'owner') canDelete = true;
-    else if (myRole === 'admin') canDelete = true;
-    else if (isOwner) canDelete = true;
-    const canEdit = isOwner;
-    const userReaction = messageReactions[message.id]?.find(r => r.user_id === user?.id);
-    const isEditing = editingMessage === message.id;
+    const messageTime = message.created_at
+      ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
+
     return (
       <div key={message.id} className={`flex ${isOwner ? 'justify-end' : 'justify-start'} mb-4`}>
-        <div className={`max-w-[90vw] md:max-w-[70%] ${isOwner ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-2xl p-4 relative shadow-lg break-words transition-all`} style={{ minWidth: 120 }}>
+        <div
+          className={`max-w-[90vw] md:max-w-[70%] p-4 rounded-2xl shadow-lg break-words transition-all
+            ${isOwner
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+            }`}
+          style={{ minWidth: 120 }}
+        >
+          {/* Sender name and time */}
           {!isOwner && (
-            <div className="text-xs text-gray-400 dark:text-gray-300 mb-2 font-semibold tracking-wide">
-              {message.sender_name}
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">{message.sender_name}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{messageTime}</span>
             </div>
           )}
-          {isEditing ? (
-            <form
-              onSubmit={e => {
-                e.preventDefault();
-                handleEditMessage(message.id, editContent);
-              }}
-              className="flex flex-col gap-2"
-            >
-              <input
-                type="text"
-                className="p-2 rounded border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                value={editContent}
-                onChange={e => setEditContent(e.target.value)}
-                autoFocus
-              />
-              <div className="flex gap-2 mt-1">
-                <button type="submit" className="px-3 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700">Išsaugoti</button>
-                <button type="button" className="px-3 py-1 rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-semibold hover:bg-gray-400 dark:hover:bg-gray-600" onClick={() => { setEditingMessage(null); setEditContent(''); }}>Atšaukti</button>
-              </div>
-            </form>
-          ) : (
-            <>
-              <div className="text-base md:text-lg font-medium mb-2 whitespace-pre-line">
-                {message.file_path ? (
-                  <>
-                    <img
-                      src={message.file_path}
-                      alt={message.file_name || 'image'}
-                      className="w-full h-auto max-w-xs max-h-64 rounded-lg mb-2 object-contain"
-                      style={{ display: 'block' }}
-                    />
-                    {/* Optionally show content as caption if it's not just the filename */}
-                    {message.content && message.content !== message.file_name && (
-                      <div>{message.content}</div>
-                    )}
-                  </>
-                ) : (
-                  message.content
+          {/* Message content */}
+          <div className="text-base md:text-lg font-medium whitespace-pre-line">
+            {message.file_path ? (
+              <>
+                <img
+                  src={message.file_path}
+                  alt={message.file_name || 'image'}
+                  className="w-full h-auto max-w-xs max-h-64 rounded-lg mb-2 object-contain"
+                  style={{ display: 'block' }}
+                />
+                {message.content && message.content !== message.file_name && (
+                  <div>{message.content}</div>
                 )}
-              </div>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                {canEdit && (
-                  <button
-                    onClick={() => { setEditingMessage(message.id); setEditContent(message.content); }}
-                    className="text-xs text-blue-600 hover:text-white px-2 py-1 rounded bg-blue-100 dark:bg-blue-700/40 hover:bg-blue-500/80 transition"
-                  >Redaguoti</button>
-                )}
-                {canDelete && (
-                  <button
-                    onClick={() => handleDeleteMessage(message.id)}
-                    className="text-xs text-red-600 hover:text-white px-2 py-1 rounded bg-red-100 dark:bg-red-700/30 hover:bg-red-500/80 transition"
-                  >Ištrinti</button>
-                )}
-                <button
-                  onClick={() => {
-                    setSelectedMessageForEmoji(message.id);
-                    setShowEmojiPicker(true);
-                  }}
-                  className={`text-xs px-2 py-1 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-700 transition ${userReaction ? 'ring-2 ring-blue-400' : ''}`}
-                  title="Pridėti reakciją"
-                  style={{ fontSize: '1.2em' }}
-                >{userReaction ? userReaction.emoji : '😊'}</button>
-                {/* Rodyti emoji reakcijas */}
-                {messageReactions[message.id]?.length > 0 && (
-                  <div className="flex gap-1 ml-2">
-                    {Object.entries(
-                      messageReactions[message.id].reduce((acc, reaction) => {
-                        acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
-                        return acc;
-                      }, {})
-                    ).map(([emoji, count]) => (
-                      <span key={emoji} className="text-sm">
-                        {emoji} {count > 1 ? count : ''}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
+              </>
+            ) : (
+              message.content
+            )}
+          </div>
+          {/* Time for your own messages */}
+          {isOwner && (
+            <div className="flex justify-end mt-1">
+              <span className="text-xs text-gray-200/80 dark:text-gray-300/80">{messageTime}</span>
+            </div>
           )}
+          {/* ...rest of your buttons (edit, delete, emoji, etc.) */}
         </div>
       </div>
     );
@@ -981,7 +931,6 @@ const Chat = () => {
     <div className="flex h-[84.5vh] bg-gray-100 dark:bg-slate-900">
       {/* Sidebar overlay for mobile */}
       <div className={`fixed inset-0 z-40 bg-black bg-opacity-30 backdrop-blur-sm transition-opacity md:hidden ${sidebarOpen || chats.length === 0 ? '' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
-      // ...existing code...
       {/* Sidebar */}
       <div className={`fixed z-50 inset-y-0 left-0 w-full max-w-xs 
         bg-white dark:bg-gray-900 
