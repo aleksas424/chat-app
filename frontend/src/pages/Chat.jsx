@@ -368,7 +368,7 @@ const Chat = () => {
     if (!socket) return;
 
     const handleMessageEdited = ({ messageId, content, edited }) => {
-      setMessages(prev => prev.map(msg =>
+      setMessages(prev => prev.map (msg =>
         msg.id === messageId ? { ...msg, content, edited } : msg
       ));
       setEditingMessage(null);
@@ -874,6 +874,7 @@ const Chat = () => {
 
   const renderMessage = (message) => {
     const isOwner = message.sender_id === user?.id;
+    const canDelete = isOwner || (myRole === 'owner' || myRole === 'admin');
     const messageTime = message.created_at
       ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : '';
@@ -970,7 +971,7 @@ const Chat = () => {
             )}
           </div>
           {/* Laikas tavo žinutėms */}
-          {isOwner && (
+          {isOwner && canDelete && (
             <div className="flex justify-end mt-1 gap-2 items-center">
               <span className="text-xs text-gray-200/80 dark:text-gray-300/80">{messageTime}</span>
               {/* Redaguoti ir Trinti mygtukai tik tavo žinutėms */}
@@ -1038,7 +1039,7 @@ const Chat = () => {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <div className="space-y-2 md:space-y-3 flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2 md:space-y-3">
             {filteredChats.length === 0 && (
               <div className="text-gray-400 text-center py-4 md:py-8 text-sm md:text-base">No chats found</div>
             )}
